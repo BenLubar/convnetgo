@@ -1,11 +1,9 @@
 package convnet
 
-/*
-TODO:
-(function(global) {
-	"use strict";
-	var Vol = global.Vol; // convenience
+type PoolLayer struct{}
 
+/*
+	TODO:
 	var PoolLayer = function(opt) {
 
 		var opt = opt || {};
@@ -124,8 +122,4 @@ TODO:
 			this.switchy = global.zeros(this.out_sx*this.out_sy*this.out_depth);
 		}
 	}
-
-	global.PoolLayer = PoolLayer;
-
-})(convnetjs);
 */

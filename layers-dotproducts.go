@@ -5,18 +5,17 @@ import (
 	"math/rand"
 )
 
-/*
-TODO:
-(function(global) {
-	"use strict";
-	var Vol = global.Vol; // convenience
+// This file contains all layers that do dot products with input,
+// but usually in a different connectivity pattern and weight sharing
+// schemes:
+// - FullyConn is fully connected dot products
+// - ConvLayer does convolutions (so weight sharing spatially)
+// putting them together in one file because they are very similar
 
-	// This file contains all layers that do dot products with input,
-	// but usually in a different connectivity pattern and weight sharing
-	// schemes:
-	// - FullyConn is fully connected dot products
-	// - ConvLayer does convolutions (so weight sharing spatially)
-	// putting them together in one file because they are very similar
+type ConvLayer struct{}
+
+/*
+	TODO:
 	var ConvLayer = function(opt) {
 		var opt = opt || {};
 

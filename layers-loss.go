@@ -116,11 +116,13 @@ func (l *SoftmaxLayer) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-/*
-TODO:
 // implements an L2 regression cost layer,
 // so penalizes \sum_i(||x_i - y_i||^2), where x is its input
 // and y is the user-provided array of "correct" values.
+type RegressionLayer struct{}
+
+/*
+TODO:
 var RegressionLayer = function(opt) {
 	var opt = opt || {};
 
@@ -190,7 +192,12 @@ RegressionLayer.prototype = {
 		this.num_inputs = json.num_inputs;
 	}
 }
+*/
 
+type SVMLayer struct{}
+
+/*
+TODO:
 var SVMLayer = function(opt) {
 	var opt = opt || {};
 

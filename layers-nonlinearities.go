@@ -1,14 +1,12 @@
 package convnet
 
-/*
-TODO:
-(function(global) {
-	"use strict";
-	var Vol = global.Vol; // convenience
+// Implements ReLU nonlinearity elementwise
+// x -> max(0, x)
+// the output is in [0, inf)
+type ReluLayer struct{}
 
-	// Implements ReLU nonlinearity elementwise
-	// x -> max(0, x)
-	// the output is in [0, inf)
+/*
+	TODO:
 	var ReluLayer = function(opt) {
 		var opt = opt || {};
 
@@ -58,10 +56,15 @@ TODO:
 			this.layer_type = json.layer_type;
 		}
 	}
+*/
 
-	// Implements Sigmoid nnonlinearity elementwise
-	// x -> 1/(1+e^(-x))
-	// so the output is between 0 and 1.
+// Implements Sigmoid nonlinearity elementwise
+// x -> 1/(1+e^(-x))
+// so the output is between 0 and 1.
+type SigmoidLayer struct{}
+
+/*
+	TODO:
 	var SigmoidLayer = function(opt) {
 		var opt = opt || {};
 
@@ -112,11 +115,16 @@ TODO:
 			this.layer_type = json.layer_type;
 		}
 	}
+*/
 
-	// Implements Maxout nnonlinearity that computes
-	// x -> max(x)
-	// where x is a vector of size group_size. Ideally of course,
-	// the input size should be exactly divisible by group_size
+// Implements Maxout nonlinearity that computes
+// x -> max(x)
+// where x is a vector of size group_size. Ideally of course,
+// the input size should be exactly divisible by group_size
+type MaxoutLayer struct{}
+
+/*
+	TODO:
 	var MaxoutLayer = function(opt) {
 		var opt = opt || {};
 
@@ -228,15 +236,15 @@ TODO:
 			this.switches = global.zeros(this.group_size);
 		}
 	}
+*/
 
-	// a helper function, since tanh is not yet part of ECMAScript. Will be in v6.
-	function tanh(x) {
-		var y = Math.exp(2 * x);
-		return (y - 1) / (y + 1);
-	}
-	// Implements Tanh nnonlinearity elementwise
-	// x -> tanh(x)
-	// so the output is between -1 and 1.
+// Implements Tanh nnonlinearity elementwise
+// x -> tanh(x)
+// so the output is between -1 and 1.
+type TanhLayer struct{}
+
+/*
+	TODO:
 	var TanhLayer = function(opt) {
 		var opt = opt || {};
 
@@ -285,12 +293,4 @@ TODO:
 			this.layer_type = json.layer_type;
 		}
 	}
-
-	global.TanhLayer = TanhLayer;
-	global.MaxoutLayer = MaxoutLayer;
-	global.ReluLayer = ReluLayer;
-	global.SigmoidLayer = SigmoidLayer;
-
-})(convnetjs);
-
 */

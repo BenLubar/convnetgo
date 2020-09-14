@@ -1,14 +1,10 @@
 package convnet
 
-/*
-TODO:
-(function(global) {
-	"use strict";
-	var Vol = global.Vol; // convenience
+// Local Response Normalization in window, along depths of volumes
+type LocalResponseNormalizationLayer struct{}
 
-	// a bit experimental layer for now. I think it works but I'm not 100%
-	// the gradient check is a bit funky. I'll look into this a bit later.
-	// Local Response Normalization in window, along depths of volumes
+/*
+	TODO:
 	var LocalResponseNormalizationLayer = function(opt) {
 		var opt = opt || {};
 
@@ -112,8 +108,4 @@ TODO:
 			this.layer_type = json.layer_type;
 		}
 	}
-
-
-	global.LocalResponseNormalizationLayer = LocalResponseNormalizationLayer;
-})(convnetjs);
 */

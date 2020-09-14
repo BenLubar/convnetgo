@@ -1,17 +1,14 @@
 package convnet
 
-/*
-TODO:
-(function(global) {
-	"use strict";
-	var Vol = global.Vol; // convenience
+// An inefficient dropout layer
+// Note this is not most efficient implementation since the layer before
+// computed all these activations and now we're just going to drop them :(
+// same goes for backward pass. Also, if we wanted to be efficient at test time
+// we could equivalently be clever and upscale during train and copy pointers during test
+type DropoutLayer struct{}
 
-	// An inefficient dropout layer
-	// Note this is not most efficient implementation since the layer before
-	// computed all these activations and now we're just going to drop them :(
-	// same goes for backward pass. Also, if we wanted to be efficient at test time
-	// we could equivalently be clever and upscale during train and copy pointers during test
-	// todo: make more efficient.
+/*
+	TODO:
 	var DropoutLayer = function(opt) {
 		var opt = opt || {};
 
@@ -73,8 +70,4 @@ TODO:
 			this.drop_prob = json.drop_prob;
 		}
 	}
-
-
-	global.DropoutLayer = DropoutLayer;
-})(convnetjs);
 */
