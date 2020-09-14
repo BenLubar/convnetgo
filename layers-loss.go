@@ -81,7 +81,7 @@ func (l *SoftmaxLayer) BackwardLoss(y int) float64 {
 	// loss is the class negative log likelihood
 	return -math.Log(l.es[y])
 }
-func (l *SoftmaxLayer) ParamsAndGrads() []*Vol { return nil }
+func (l *SoftmaxLayer) ParamsAndGrads() []ParamsAndGrads { return nil }
 func (l *SoftmaxLayer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		OutDepth  int    `json:"out_depth"`

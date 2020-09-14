@@ -37,8 +37,8 @@ func (l *InputLayer) Forward(v *Vol, isTraining bool) *Vol {
 	return l.act // simply identity function for now
 }
 
-func (l *InputLayer) Backward()              {}
-func (l *InputLayer) ParamsAndGrads() []*Vol { return nil }
+func (l *InputLayer) Backward()                        {}
+func (l *InputLayer) ParamsAndGrads() []ParamsAndGrads { return nil }
 
 func (l *InputLayer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {

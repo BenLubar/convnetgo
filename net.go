@@ -26,21 +26,25 @@ const (
 )
 
 type LayerDef struct {
-	Type          LayerType `json:"type"`
-	NumNeurons    int       `json:"num_neurons"`
-	NumClasses    int       `json:"num_classes"`
-	BiasPref      float64   `json:"bias_pref"`
-	BiasPrefZero  bool      `json:"-"`
-	Activation    LayerType `json:"activation"`
-	GroupSize     int       `json:"group_size"`
-	GroupSizeZero bool      `json:"-"`
-	DropProb      float64   `json:"drop_prob"`
-	InSx          int       `json:"in_sx"`
-	InSy          int       `json:"in_sy"`
-	InDepth       int       `json:"in_depth"`
-	OutSx         int       `json:"out_sx"`
-	OutSy         int       `json:"out_sy"`
-	OutDepth      int       `json:"out_depth"`
+	Type           LayerType `json:"type"`
+	NumNeurons     int       `json:"num_neurons"`
+	NumClasses     int       `json:"num_classes"`
+	BiasPref       float64   `json:"bias_pref"`
+	BiasPrefZero   bool      `json:"-"`
+	Activation     LayerType `json:"activation"`
+	GroupSize      int       `json:"group_size"`
+	GroupSizeZero  bool      `json:"-"`
+	DropProb       float64   `json:"drop_prob"`
+	InSx           int       `json:"in_sx"`
+	InSy           int       `json:"in_sy"`
+	InDepth        int       `json:"in_depth"`
+	OutSx          int       `json:"out_sx"`
+	OutSy          int       `json:"out_sy"`
+	OutDepth       int       `json:"out_depth"`
+	L1DecayMul     float64   `json:"l1_decay_mul"`
+	L1DecayMulZero bool      `json:"-"`
+	L2DecayMul     float64   `json:"l2_decay_mul"`
+	L2DecayMulZero bool      `json:"-"`
 }
 
 type Layer interface {
@@ -50,7 +54,7 @@ type Layer interface {
 
 	Forward(v *Vol, isTraining bool) *Vol
 	Backward()
-	ParamsAndGrads() []*Vol
+	ParamsAndGrads() []ParamsAndGrads
 
 	fromDef(LayerDef)
 	json.Marshaler
@@ -60,6 +64,13 @@ type Layer interface {
 type LossLayer interface {
 	Layer
 	BackwardLoss(y int) float64
+}
+
+type ParamsAndGrads struct {
+	Params     []float64
+	Grads      []float64
+	L1DecayMul float64
+	L2DecayMul float64
 }
 
 // Net manages a set of layers
@@ -224,8 +235,8 @@ func (n *Net) Backward(y int) float64 {
 }
 
 // accumulate parameters and gradients for the entire network
-func (n *Net) ParamsAndGrads() []*Vol {
-	var response []*Vol
+func (n *Net) ParamsAndGrads() []ParamsAndGrads {
+	var response []ParamsAndGrads
 
 	for _, l := range n.Layers {
 		response = append(response, l.ParamsAndGrads()...)
@@ -242,8 +253,9 @@ func (n *Net) Prediction() int {
 		panic("convnet: Net.Prediction assumes softmax as the last layer of the net!")
 	}
 
-	p := s.OutAct.W
+	p := s.outAct.W
 	maxv, maxi := p[0], 0
+
 	for i := 1; i < len(p); i++ {
 		if p[i] > maxv {
 			maxv, maxi = p[i], i
@@ -267,11 +279,13 @@ func (n *Net) UnmarshalJSON(b []byte) error {
 		var t struct {
 			LayerType string `json:"layer_type"`
 		}
+
 		if err := json.Unmarshal(lj, &t); err != nil {
 			return err
 		}
 
 		var l Layer
+
 		switch t.LayerType {
 		case "input":
 			l = &InputLayer{}
