@@ -46,6 +46,14 @@ type LayerDef struct {
 	L1DecayMulZero bool      `json:"-"`
 	L2DecayMul     float64   `json:"l2_decay_mul"`
 	L2DecayMulZero bool      `json:"-"`
+	Sx             int       `json:"sx"`
+	SxZero         bool      `json:"-"`
+	Sy             int       `json:"sy"`
+	SyZero         bool      `json:"-"`
+	Pad            int       `json:"pad"`
+	PadZero        bool      `json:"-"`
+	Stride         int       `json:"stride"`
+	StrideZero     bool      `json:"-"`
 }
 
 type Layer interface {
