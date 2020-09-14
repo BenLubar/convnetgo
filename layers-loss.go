@@ -3,6 +3,7 @@ package convnet
 import (
 	"encoding/json"
 	"math"
+	"math/rand"
 )
 
 // Layers that implement a loss. Currently these are the layers that
@@ -25,7 +26,7 @@ func (l *SoftmaxLayer) OutSx() int    { return 1 }
 func (l *SoftmaxLayer) OutSy() int    { return 1 }
 func (l *SoftmaxLayer) OutDepth() int { return l.outDepth }
 
-func (l *SoftmaxLayer) fromDef(def LayerDef) {
+func (l *SoftmaxLayer) fromDef(def LayerDef, r *rand.Rand) {
 	l.outDepth = def.InSx * def.InSy * def.InDepth
 }
 

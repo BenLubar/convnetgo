@@ -5,6 +5,7 @@ package convnet
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 )
 
 type LayerType int
@@ -56,7 +57,7 @@ type Layer interface {
 	Backward()
 	ParamsAndGrads() []ParamsAndGrads
 
-	fromDef(LayerDef)
+	fromDef(LayerDef, *rand.Rand)
 	json.Marshaler
 	json.Unmarshaler
 }
@@ -136,7 +137,7 @@ func desugar(defs []LayerDef) []LayerDef {
 }
 
 // takes a list of layer definitions and creates the network layer objects
-func (n *Net) MakeLayers(defs []LayerDef) {
+func (n *Net) MakeLayers(defs []LayerDef, r *rand.Rand) {
 	// few checks
 	if len(defs) < 2 {
 		panic("convnet: at least one input layer and one loss layer are required")
@@ -160,43 +161,43 @@ func (n *Net) MakeLayers(defs []LayerDef) {
 		switch def.Type {
 		case LayerFC:
 			n.Layers[i] = &FullyConnLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		case LayerLRN:
 			n.Layers[i] = &LocalResponseNormalizationLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		case LayerDropout:
 			n.Layers[i] = &DropoutLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		case LayerInput:
 			n.Layers[i] = &InputLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		case LayerSoftmax:
 			n.Layers[i] = &SoftmaxLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		case LayerRegression:
 			n.Layers[i] = &RegressionLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		case LayerConv:
 			n.Layers[i] = &ConvLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		case LayerPool:
 			n.Layers[i] = &PoolLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		case LayerRelu:
 			n.Layers[i] = &ReluLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		case LayerSigmoid:
 			n.Layers[i] = &SigmoidLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		case LayerTanh:
 			n.Layers[i] = &TanhLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		case LayerMaxout:
 			n.Layers[i] = &MaxoutLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		case LayerSVM:
 			n.Layers[i] = &SVMLayer{}
-			n.Layers[i].fromDef(def)
+			n.Layers[i].fromDef(def, r)
 		default:
 			panic("convnet: unrecognized layer type: " + def.Type.String())
 		}

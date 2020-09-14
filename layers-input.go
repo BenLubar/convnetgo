@@ -1,6 +1,9 @@
 package convnet
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"math/rand"
+)
 
 type InputLayer struct {
 	outDepth int
@@ -14,7 +17,7 @@ func (l *InputLayer) OutDepth() int { return l.outDepth }
 func (l *InputLayer) OutSx() int    { return l.outSx }
 func (l *InputLayer) OutSy() int    { return l.outSy }
 
-func (l *InputLayer) fromDef(def LayerDef) {
+func (l *InputLayer) fromDef(def LayerDef, r *rand.Rand) {
 	// required: depth
 	l.outDepth = def.OutDepth
 

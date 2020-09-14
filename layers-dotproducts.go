@@ -191,6 +191,10 @@ type FullyConnLayer struct {
 	outAct     *Vol
 }
 
+func (l *FullyConnLayer) OutSx() int    { return 1 }
+func (l *FullyConnLayer) OutSy() int    { return 1 }
+func (l *FullyConnLayer) OutDepth() int { return l.outDepth }
+
 func (l *FullyConnLayer) fromDef(def LayerDef, r *rand.Rand) {
 	// required
 	l.outDepth = def.NumNeurons

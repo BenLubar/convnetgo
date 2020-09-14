@@ -9,7 +9,9 @@ import (
 )
 
 // Simple Fully-Connected Neural Net Classifier.
-func createTestNet() (*convnet.Net, *convnet.SGDTrainer) {
+func createTestNet() (*convnet.Net, *convnet.SGDTrainer, *rand.Rand) {
+	r := rand.New(rand.NewSource(0))
+
 	net := &convnet.Net{}
 
 	layerDefs := []convnet.LayerDef{
@@ -19,11 +21,11 @@ func createTestNet() (*convnet.Net, *convnet.SGDTrainer) {
 		{Type: convnet.LayerSoftmax, NumClasses: 3},
 	}
 
-	net.MakeLayers(layerDefs)
+	net.MakeLayers(layerDefs, r)
 
-	trainer := convnet.NewSGDTrainer(net, &convnet.NetOptions{LearningRate: 0.0001, Momentum: 0.0, BatchSize: 1, L2Decay: 0.0})
+	trainer := convnet.NewSGDTrainer(net, &convnet.TrainerOptions{LearningRate: 0.0001, Momentum: 0.0, BatchSize: 1, L2Decay: 0.0})
 
-	return net, trainer
+	return net, trainer, r
 }
 
 // it should be possible to initialize.
@@ -31,7 +33,7 @@ func TestInitialize(t *testing.T) {
 	// tanh are their own layers. Softmax gets its own fully connected layer.
 	// this should all get desugared just fine.
 
-	net, _ := createTestNet()
+	net, _, _ := createTestNet()
 
 	if len(net.Layers) != 7 {
 		t.Errorf("expected 7 layers, but there are %d", len(net.Layers))
@@ -40,7 +42,7 @@ func TestInitialize(t *testing.T) {
 
 // it should forward prop volumes to probabilities
 func TestForward(t *testing.T) {
-	net, _ := createTestNet()
+	net, _, _ := createTestNet()
 
 	x := convnet.NewVol1D([]float64{0.2, -0.3})
 	pv := net.Forward(x, false)
@@ -65,8 +67,7 @@ func TestForward(t *testing.T) {
 
 // it should increase probabilities for ground truth class when trained
 func TestTrain(t *testing.T) {
-	net, trainer := createTestNet()
-	r := rand.New(rand.NewSource(0))
+	net, trainer, r := createTestNet()
 
 	// lets test 100 random point and label settings
 	// note that this should work since l2 and l1 regularization are off
@@ -89,9 +90,7 @@ func TestGradient(t *testing.T) {
 	// right then that's comforting, because it is a function
 	// of all gradients above, for all layers.
 
-	r := rand.New(rand.NewSource(0))
-
-	net, trainer := createTestNet()
+	net, trainer, r := createTestNet()
 
 	x := convnet.NewVol1D([]float64{r.Float64()*2 - 1, r.Float64()*2 - 1})
 	gti := r.Intn(3)      // ground truth index
