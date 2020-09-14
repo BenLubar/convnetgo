@@ -1,51 +1,74 @@
 package convnet
 
-/*
-TODO:
-(function(global) {
-  "use strict";
-  var Vol = global.Vol; // convenience
-  var getopt = global.getopt;
+import "encoding/json"
 
-  var InputLayer = function(opt) {
-    var opt = opt || {};
+type InputLayer struct {
+	outDepth int
+	outSx    int
+	outSy    int
 
-    // required: depth
-    this.out_depth = getopt(opt, ['out_depth', 'depth'], 0);
+	act *Vol
+}
 
-    // optional: default these dimensions to 1
-    this.out_sx = getopt(opt, ['out_sx', 'sx', 'width'], 1);
-    this.out_sy = getopt(opt, ['out_sy', 'sy', 'height'], 1);
-    
-    // computed
-    this.layer_type = 'input';
-  }
-  InputLayer.prototype = {
-    forward: function(V, is_training) {
-      this.in_act = V;
-      this.out_act = V;
-      return this.out_act; // simply identity function for now
-    },
-    backward: function() { },
-    getParamsAndGrads: function() {
-      return [];
-    },
-    toJSON: function() {
-      var json = {};
-      json.out_depth = this.out_depth;
-      json.out_sx = this.out_sx;
-      json.out_sy = this.out_sy;
-      json.layer_type = this.layer_type;
-      return json;
-    },
-    fromJSON: function(json) {
-      this.out_depth = json.out_depth;
-      this.out_sx = json.out_sx;
-      this.out_sy = json.out_sy;
-      this.layer_type = json.layer_type; 
-    }
-  }
+func (l *InputLayer) OutDepth() int { return l.outDepth }
+func (l *InputLayer) OutSx() int    { return l.outSx }
+func (l *InputLayer) OutSy() int    { return l.outSy }
 
-  global.InputLayer = InputLayer;
-})(convnetjs);
-*/
+func (l *InputLayer) fromDef(def LayerDef) {
+	// required: depth
+	l.outDepth = def.OutDepth
+
+	// optional: default these dimensions to 1
+	l.outSx = def.OutSx
+	l.outSy = def.OutSy
+
+	if l.outSx == 0 {
+		l.outSx = 1
+	}
+
+	if l.outSy == 0 {
+		l.outSy = 1
+	}
+}
+
+func (l *InputLayer) Forward(v *Vol, isTraining bool) *Vol {
+	l.act = v
+
+	return l.act // simply identity function for now
+}
+
+func (l *InputLayer) Backward()              {}
+func (l *InputLayer) ParamsAndGrads() []*Vol { return nil }
+
+func (l *InputLayer) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+	}{
+		OutDepth:  l.outDepth,
+		OutSx:     l.outSx,
+		OutSy:     l.outSy,
+		LayerType: LayerInput.String(),
+	})
+}
+
+func (l *InputLayer) UnmarshalJSON(b []byte) error {
+	var data struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+	}
+
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+
+	l.outDepth = data.OutDepth
+	l.outSx = data.OutSx
+	l.outSy = data.OutSy
+
+	return nil
+}
