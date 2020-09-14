@@ -1,3 +1,7 @@
+package convnet
+
+/*
+TODO:
 (function(global) {
   "use strict";
 
@@ -135,3 +139,4 @@
   global.assert = assert;
   
 })(convnetjs);
+*/

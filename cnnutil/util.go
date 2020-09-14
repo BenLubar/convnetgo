@@ -1,4 +1,7 @@
+package cnnutil
 
+/*
+TODO:
 // contains various utility functions 
 var cnnutil = (function(exports){
 
@@ -62,3 +65,4 @@ var cnnutil = (function(exports){
 })(typeof module != 'undefined' && module.exports);  // add exports to module.exports if in node.js
 
 
+*/

@@ -1,3 +1,7 @@
+package convnet
+
+/*
+TODO:
 (function(global) {
   "use strict";
 
@@ -109,3 +113,4 @@
 
   global.Vol = Vol;
 })(convnetjs);
+*/

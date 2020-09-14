@@ -1,3 +1,7 @@
+package convnet
+
+/*
+TODO:
 (function(global) {
   "use strict";
   var Vol = global.Vol; // convenience
@@ -105,4 +109,4 @@
   global.augment = augment;
   global.img_to_vol = img_to_vol;
 
-})(convnetjs);
+})(convnetjs);*/

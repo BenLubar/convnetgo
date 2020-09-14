@@ -1,3 +1,7 @@
+package convnet
+
+/*
+TODO:
 (function(global) {
   "use strict";
   var Vol = global.Vol; // convenience
@@ -73,3 +77,4 @@
 
   global.DropoutLayer = DropoutLayer;
 })(convnetjs);
+*/

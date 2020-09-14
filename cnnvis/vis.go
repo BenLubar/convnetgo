@@ -1,4 +1,7 @@
+package cnnvis
 
+/*
+TODO:
 // contains various utility functions 
 var cnnvis = (function(exports){
 
@@ -193,3 +196,4 @@ var cnnvis = (function(exports){
 })(typeof module != 'undefined' && module.exports);  // add exports to module.exports if in node.js
 
 
+*/

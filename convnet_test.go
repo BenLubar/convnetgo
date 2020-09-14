@@ -1,3 +1,7 @@
+package convnet
+
+/*
+TODO:
 describe("Simple Fully-Connected Neural Net Classifier", function() {
   var net;
   var trainer;
@@ -86,3 +90,4 @@ describe("Simple Fully-Connected Neural Net Classifier", function() {
     }
   });
 });
+*/

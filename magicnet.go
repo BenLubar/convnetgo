@@ -1,3 +1,7 @@
+package convnet
+
+/*
+TODO:
 (function(global) {
   "use strict";
 
@@ -19,7 +23,7 @@
   - samples candidate networks
   - evaluates candidate networks on all data folds
   - produces predictions by model-averaging the best networks
-  */
+  * /
   var MagicNet = function(data, labels, opt) {
     var opt = opt || {};
     if(typeof data === 'undefined') { data = []; }
@@ -35,7 +39,7 @@
     this.num_candidates = getopt(opt, 'num_candidates', 50); // we evaluate several in parallel
     // how many epochs of data to train every network? for every fold?
     // higher values mean higher accuracy in final results, but more expensive
-    this.num_epochs = getopt(opt, 'num_epochs', 50); 
+    this.num_epochs = getopt(opt, 'num_epochs', 50);
     // number of best models to average during prediction. Usually higher = better
     this.ensemble_size = getopt(opt, 'ensemble_size', 10);
 
@@ -120,7 +124,7 @@
       } else {
         trainer_def = {method:'sgd', learning_rate: lr, momentum: mom, batch_size:bs, l2_decay:l2};
       }
-      
+
       var trainer = new Trainer(net, trainer_def);
 
       var cand = {};
@@ -143,7 +147,7 @@
     },
 
     step: function() {
-      
+
       // run an example through current candidate
       this.iter++;
 
@@ -181,13 +185,13 @@
             this.evaluated_candidates.push(this.candidates[k]);
           }
           // sort evaluated candidates according to accuracy achieved
-          this.evaluated_candidates.sort(function(a, b) { 
-            return (a.accv / a.acc.length) 
-                 > (b.accv / b.acc.length) 
+          this.evaluated_candidates.sort(function(a, b) {
+            return (a.accv / a.acc.length)
+                 > (b.accv / b.acc.length)
                  ? -1 : 1;
           });
           // and clip only to the top few ones (lets place limit at 3*ensemble_size)
-          // otherwise there are concerns with keeping these all in memory 
+          // otherwise there are concerns with keeping these all in memory
           // if MagicNet is being evaluated for a very long time
           if(this.evaluated_candidates.length > 3 * this.ensemble_size) {
             this.evaluated_candidates = this.evaluated_candidates.slice(0, 3 * this.ensemble_size);
@@ -257,9 +261,9 @@
       for(var j=0;j<nv;j++) {
         var net = eval_candidates[j].net;
         var x = net.forward(data);
-        if(j===0) { 
-          xout = x; 
-          n = x.w.length; 
+        if(j===0) {
+          xout = x;
+          n = x.w.length;
         } else {
           // add it on
           for(var d=0;d<n;d++) {
@@ -278,7 +282,7 @@
       var xout = this.predict_soft(data);
       if(xout.w.length !== 0) {
         var stats = maxmin(xout.w);
-        var predicted_label = stats.maxi; 
+        var predicted_label = stats.maxi;
       } else {
         var predicted_label = -1; // error out
       }
@@ -314,8 +318,9 @@
     onFinishFold: function(f) { this.finish_fold_callback = f; },
     // called when a batch of candidates has finished evaluating
     onFinishBatch: function(f) { this.finish_batch_callback = f; }
-    
+
   };
 
   global.MagicNet = MagicNet;
 })(convnetjs);
+*/
