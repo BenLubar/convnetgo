@@ -21,7 +21,7 @@ func createTestNet() (*convnet.Net, *convnet.SGDTrainer) {
 
 	net.MakeLayers(layerDefs)
 
-	trainer := convnet.NewSGDTrainer(net, &convnet.NetOptions{learning_rate: 0.0001, momentum: 0.0, batch_size: 1, l2_decay: 0.0})
+	trainer := convnet.NewSGDTrainer(net, &convnet.NetOptions{LearningRate: 0.0001, Momentum: 0.0, BatchSize: 1, L2Decay: 0.0})
 
 	return net, trainer
 }

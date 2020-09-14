@@ -1,116 +1,154 @@
 package convnet
 
-/*
-TODO:
-(function(global) {
-  "use strict";
+import (
+	"encoding/json"
+	"math"
+	"math/rand"
+)
 
-  // Vol is the basic building block of all data in a net.
-  // it is essentially just a 3D volume of numbers, with a
-  // width (sx), height (sy), and depth (depth).
-  // it is used to hold data for all filters, all volumes,
-  // all weights, and also stores all gradients w.r.t. 
-  // the data. c is optionally a value to initialize the volume
-  // with. If c is missing, fills the Vol with random numbers.
-  var Vol = function(sx, sy, depth, c) {
-    // this is how you check if a variable is an array. Oh, Javascript :)
-    if(Object.prototype.toString.call(sx) === '[object Array]') {
-      // we were given a list in sx, assume 1D volume and fill it up
-      this.sx = 1;
-      this.sy = 1;
-      this.depth = sx.length;
-      // we have to do the following copy because we want to use
-      // fast typed arrays, not an ordinary javascript array
-      this.w = global.zeros(this.depth);
-      this.dw = global.zeros(this.depth);
-      for(var i=0;i<this.depth;i++) {
-        this.w[i] = sx[i];
-      }
-    } else {
-      // we were given dimensions of the vol
-      this.sx = sx;
-      this.sy = sy;
-      this.depth = depth;
-      var n = sx*sy*depth;
-      this.w = global.zeros(n);
-      this.dw = global.zeros(n);
-      if(typeof c === 'undefined') {
-        // weight normalization is done to equalize the output
-        // variance of every neuron, otherwise neurons with a lot
-        // of incoming connections have outputs of larger variance
-        var scale = Math.sqrt(1.0/(sx*sy*depth));
-        for(var i=0;i<n;i++) { 
-          this.w[i] = global.randn(0.0, scale);
-        }
-      } else {
-        for(var i=0;i<n;i++) { 
-          this.w[i] = c;
-        }
-      }
-    }
-  }
+// Vol is the basic building block of all data in a net.
+// it is essentially just a 3D volume of numbers, with a
+// width (sx), height (sy), and depth (depth).
+// it is used to hold data for all filters, all volumes,
+// all weights, and also stores all gradients w.r.t.
+// the data. c is optionally a value to initialize the volume
+// with. If c is missing, fills the Vol with random numbers.
+type Vol struct {
+	Sx    int       `json:"sx"`
+	Sy    int       `json:"sy"`
+	Depth int       `json:"depth"`
+	W     []float64 `json:"w"`
+	Dw    []float64 `json:"-"`
+}
 
-  Vol.prototype = {
-    get: function(x, y, d) { 
-      var ix=((this.sx * y)+x)*this.depth+d;
-      return this.w[ix];
-    },
-    set: function(x, y, d, v) { 
-      var ix=((this.sx * y)+x)*this.depth+d;
-      this.w[ix] = v; 
-    },
-    add: function(x, y, d, v) { 
-      var ix=((this.sx * y)+x)*this.depth+d;
-      this.w[ix] += v; 
-    },
-    get_grad: function(x, y, d) { 
-      var ix = ((this.sx * y)+x)*this.depth+d;
-      return this.dw[ix]; 
-    },
-    set_grad: function(x, y, d, v) { 
-      var ix = ((this.sx * y)+x)*this.depth+d;
-      this.dw[ix] = v; 
-    },
-    add_grad: function(x, y, d, v) { 
-      var ix = ((this.sx * y)+x)*this.depth+d;
-      this.dw[ix] += v; 
-    },
-    cloneAndZero: function() { return new Vol(this.sx, this.sy, this.depth, 0.0)},
-    clone: function() {
-      var V = new Vol(this.sx, this.sy, this.depth, 0.0);
-      var n = this.w.length;
-      for(var i=0;i<n;i++) { V.w[i] = this.w[i]; }
-      return V;
-    },
-    addFrom: function(V) { for(var k=0;k<this.w.length;k++) { this.w[k] += V.w[k]; }},
-    addFromScaled: function(V, a) { for(var k=0;k<this.w.length;k++) { this.w[k] += a*V.w[k]; }},
-    setConst: function(a) { for(var k=0;k<this.w.length;k++) { this.w[k] = a; }},
+func NewVol1D(w []float64) *Vol {
+	v := &Vol{
+		Sx:    1,
+		Sy:    1,
+		Depth: len(w),
+		W:     make([]float64, len(w)),
+		Dw:    make([]float64, len(w)),
+	}
 
-    toJSON: function() {
-      // todo: we may want to only save d most significant digits to save space
-      var json = {}
-      json.sx = this.sx; 
-      json.sy = this.sy;
-      json.depth = this.depth;
-      json.w = this.w;
-      return json;
-      // we wont back up gradients to save space
-    },
-    fromJSON: function(json) {
-      this.sx = json.sx;
-      this.sy = json.sy;
-      this.depth = json.depth;
+	copy(v.W, w)
 
-      var n = this.sx*this.sy*this.depth;
-      this.w = global.zeros(n);
-      this.dw = global.zeros(n);
-      // copy over the elements.
-      for(var i=0;i<n;i++) {
-        this.w[i] = json.w[i];
-      }
-    }
-  }
+	return v
+}
 
-  global.Vol = Vol;
-})(convnetjs);
-*/
+func NewVol(sx, sy, depth int, c float64) *Vol {
+	n := sx * sy * depth
+
+	v := &Vol{
+		Sx:    sx,
+		Sy:    sy,
+		Depth: depth,
+		W:     make([]float64, n),
+		Dw:    make([]float64, n),
+	}
+
+	for i := range v.W {
+		v.W[i] = c
+	}
+
+	return v
+}
+
+func NewVolRand(sx, sy, depth int, r *rand.Rand) *Vol {
+	n := sx * sy * depth
+
+	v := &Vol{
+		Sx:    sx,
+		Sy:    sy,
+		Depth: depth,
+		W:     make([]float64, n),
+		Dw:    make([]float64, n),
+	}
+
+	// weight normalization is done to equalize the output
+	// variance of every neuron, otherwise neurons with a lot
+	// of incoming connections have outputs of larger variance
+	scale := math.Sqrt(1.0 / float64(sx*sy*depth))
+
+	for i := range v.W {
+		v.W[i] = r.NormFloat64() * scale
+	}
+
+	return v
+}
+
+func (v *Vol) index(x, y, d int) int {
+	return ((v.Sx*y)+x)*v.Depth + d
+}
+func (v *Vol) Get(x, y, d int) float64 {
+	return v.W[v.index(x, y, d)]
+}
+func (v *Vol) Set(x, y, d int, value float64) {
+	v.W[v.index(x, y, d)] = value
+}
+func (v *Vol) Add(x, y, d int, value float64) {
+	v.W[v.index(x, y, d)] += value
+}
+func (v *Vol) GetGrad(x, y, d int) float64 {
+	return v.Dw[v.index(x, y, d)]
+}
+func (v *Vol) SetGrad(x, y, d int, value float64) {
+	v.Dw[v.index(x, y, d)] = value
+}
+func (v *Vol) AddGrad(x, y, d int, value float64) {
+	v.Dw[v.index(x, y, d)] += value
+}
+func (v *Vol) CloneAndZero() *Vol {
+	return NewVol(v.Sx, v.Sy, v.Depth, 0.0)
+}
+func (v *Vol) Clone() *Vol {
+	v2 := &Vol{
+		Sx: v.Sx, Sy: v.Sy,
+		Depth: v.Depth,
+		W:     make([]float64, len(v.W)),
+		Dw:    make([]float64, len(v.W)),
+	}
+
+	copy(v2.W, v.W)
+
+	return v2
+}
+func (v *Vol) AddFrom(v2 *Vol) {
+	for k := range v.W {
+		v.W[k] += v2.W[k]
+	}
+}
+func (v *Vol) AddFromScaled(v2 *Vol, a float64) {
+	for k := range v.W {
+		v.W[k] += a * v2.W[k]
+	}
+}
+func (v *Vol) SetConst(a float64) {
+	for k := range v.W {
+		v.W[k] = a
+	}
+}
+
+func (v *Vol) UnmarshalJSON(b []byte) error {
+	var data struct {
+		Sx    int       `json:"sx"`
+		Sy    int       `json:"sy"`
+		Depth int       `json:"depth"`
+		W     []float64 `json:"w"`
+	}
+
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+
+	v.Sx = data.Sx
+	v.Sy = data.Sy
+	v.Depth = data.Depth
+
+	n := v.Sx * v.Sy * v.Depth
+	v.W = make([]float64, n)
+	v.Dw = make([]float64, n)
+
+	copy(v.W, data.W)
+
+	return nil
+}
