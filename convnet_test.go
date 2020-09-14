@@ -1,93 +1,119 @@
-package convnet
+package convnet_test
 
-/*
-TODO:
-describe("Simple Fully-Connected Neural Net Classifier", function() {
-  var net;
-  var trainer;
+import (
+	"math"
+	"math/rand"
+	"testing"
 
-  beforeEach(function() {
-    net = new convnetjs.Net();
+	"github.com/BenLubar/convnet"
+)
 
-    var layer_defs = [];
-    layer_defs.push({type:'input', out_sx:1, out_sy:1, out_depth:2});
-    layer_defs.push({type:'fc', num_neurons:5, activation:'tanh'});
-    layer_defs.push({type:'fc', num_neurons:5, activation:'tanh'});
-    layer_defs.push({type:'softmax', num_classes:3});
-    net.makeLayers(layer_defs);
+// Simple Fully-Connected Neural Net Classifier.
+func createTestNet() (*convnet.Net, *convnet.SGDTrainer) {
+	net := &convnet.Net{}
 
-    trainer = new convnetjs.SGDTrainer(net, 
-          {learning_rate:0.0001, momentum:0.0, batch_size:1, l2_decay:0.0});
-  });
+	layerDefs := []convnet.LayerDef{
+		{Type: convnet.LayerInput, OutSx: 1, OutSy: 1, OutDepth: 2},
+		{Type: convnet.LayerFC, NumNeurons: 5, Activation: convnet.ActivationTanh},
+		{Type: convnet.LayerFC, NumNeurons: 5, Activation: convnet.ActivationTanh},
+		{Type: convnet.LayerSoftMax, NumClasses: 3},
+	}
 
-  it("should be possible to initialize", function() {
-    
-    // tanh are their own layers. Softmax gets its own fully connected layer.
-    // this should all get desugared just fine.
-    expect(net.layers.length).toEqual(7); 
-    
-  });
+	net.MakeLayers(layerDefs)
 
-  it("should forward prop volumes to probabilities", function() {
+	trainer := convnet.NewSGDTrainer(net, &convnet.NetOptions{learning_rate: 0.0001, momentum: 0.0, batch_size: 1, l2_decay: 0.0})
 
-    var x = new convnetjs.Vol([0.2, -0.3]);
-    var probability_volume = net.forward(x);
+	return net, trainer
+}
 
-    expect(probability_volume.w.length).toEqual(3); // 3 classes output
-    var w = probability_volume.w;
-    for(var i=0;i<3;i++) {
-      expect(w[i]).toBeGreaterThan(0);
-      expect(w[i]).toBeLessThan(1.0);
-    }
-    expect(w[0]+w[1]+w[2]).toBeCloseTo(1.0);
+// it should be possible to initialize.
+func TestInitialize(t *testing.T) {
+	// tanh are their own layers. Softmax gets its own fully connected layer.
+	// this should all get desugared just fine.
 
-  });
+	net, _ := createTestNet()
 
-  it("should increase probabilities for ground truth class when trained", function() {
+	if len(net.Layers) != 7 {
+		t.Errorf("expected 7 layers, but there are %d", len(net.Layers))
+	}
+}
 
-    // lets test 100 random point and label settings
-    // note that this should work since l2 and l1 regularization are off
-    // an issue is that if step size is too high, this could technically fail...
-    for(var k=0;k<100;k++) {
-      var x = new convnetjs.Vol([Math.random() * 2 - 1, Math.random() * 2 - 1]);
-      var pv = net.forward(x);
-      var gti = Math.floor(Math.random() * 3);
-      trainer.train(x, gti);
-      var pv2 = net.forward(x);
-      expect(pv2.w[gti]).toBeGreaterThan(pv.w[gti]);
-    }
+// it should forward prop volumes to probabilities
+func TestForward(t *testing.T) {
+	net, _ := createTestNet()
 
-  });
+	x := convnet.NewVol1D([]float64{0.2, -0.3})
+	pv := net.Forward(x)
 
-  it("should compute correct gradient at data", function() {
+	// 3 classes output
+	if len(pv.W) != 3 {
+		t.Errorf("expected probability_volume.W to have length 3, but length is %d", len(pv.W))
+	}
+	var total float64
+	for i, f := range pv.W {
+		if f <= 0 || f >= 1 {
+			t.Errorf("expected probability_volume[%d] to be in (0, 1) but it is %f", i, f)
+		}
 
-    // here we only test the gradient at data, but if this is
-    // right then that's comforting, because it is a function 
-    // of all gradients above, for all layers.
+		total += f
+	}
 
-    var x = new convnetjs.Vol([Math.random() * 2 - 1, Math.random() * 2 - 1]);
-    var gti = Math.floor(Math.random() * 3); // ground truth index
-    trainer.train(x, gti); // computes gradients at all layers, and at x
+	if math.Abs(total-1) > 0.0001 {
+		t.Errorf("expected total probability to approximately equal 1, but it is %f", total)
+	}
+}
 
-    var delta = 0.000001;
+// it should increase probabilities for ground truth class when trained
+func TestTrain(t *testing.T) {
+	net, trainer := createTestNet()
+	r := rand.New(rand.NewSource(0))
 
-    for(var i=0;i<x.w.length;i++) {
+	// lets test 100 random point and label settings
+	// note that this should work since l2 and l1 regularization are off
+	// an issue is that if step size is too high, this could technically fail...
+	for k := 0; k < 100; k++ {
+		x := convnet.NewVol1D([]float64{r.Float64()*2 - 1, r.Float64()*2 - 1})
+		pv := net.Forward(x)
+		gti := r.Intn(3)
+		trainer.Train(x, gti)
+		pv2 := net.Forward(x)
+		if pv2.W[gti] <= pv.W[gti] {
+			t.Errorf("expected trained class probability to increase, but it changed from %f to %f", pv.W[gti], pv2.W[gti])
+		}
+	}
+}
 
-      var grad_analytic = x.dw[i];
+// it should compute correct gradient at data
+func TestGradient(t *testing.T) {
+	// here we only test the gradient at data, but if this is
+	// right then that's comforting, because it is a function
+	// of all gradients above, for all layers.
 
-      var xold = x.w[i];
-      x.w[i] += delta;
-      var c0 = net.getCostLoss(x, gti);
-      x.w[i] -= 2*delta;
-      var c1 = net.getCostLoss(x, gti);
-      x.w[i] = xold; // reset
+	r := rand.New(rand.NewSource(0))
 
-      var grad_numeric = (c0 - c1)/(2 * delta);
-      var rel_error = Math.abs(grad_analytic - grad_numeric)/Math.abs(grad_analytic + grad_numeric);
-      console.log(i + ': numeric: ' + grad_numeric + ', analytic: ' + grad_analytic + ' => rel error ' + rel_error);
-      expect(rel_error).toBeLessThan(1e-2);
+	net, trainer := createTestNet()
 
-    }
-  });
-});
-*/
+	x := convnet.NewVol1D([]float64{r.Float64()*2 - 1, r.Float64()*2 - 1})
+	gti := r.Intn(3)      // ground truth index
+	trainer.Train(x, gti) // computes gradients at all layers, and at x
+
+	const delta = 0.000001
+
+	for i := 0; i < len(x.W); i++ {
+		gradAnalytic := x.Dw[i]
+
+		xold := x.W[i]
+		x.W[i] += delta
+		c0 := net.GetCostLoss(x, gti)
+		x.W[i] -= 2 * delta
+		c1 := net.GetCostLoss(x, gti)
+		x.W[i] = xold // reset
+
+		gradNumeric := (c0 - c1) / (2 * delta)
+		relError := math.Abs(gradAnalytic-gradNumeric) / math.Abs(gradAnalytic+gradNumeric)
+		t.Logf("%d: numeric: %f, analytic: %f => rel error %f", i, gradNumeric, gradAnalytic, relError)
+		if relError >= 1e-2 {
+			t.Error("rel error too high")
+		}
+	}
+}
