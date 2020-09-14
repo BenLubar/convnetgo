@@ -1,5 +1,11 @@
 package convnet
 
+import (
+	"encoding/json"
+	"math"
+	"math/rand"
+)
+
 // Implements ReLU nonlinearity elementwise
 // x -> max(0, x)
 // the output is in [0, inf)
@@ -241,56 +247,78 @@ type MaxoutLayer struct{}
 // Implements Tanh nnonlinearity elementwise
 // x -> tanh(x)
 // so the output is between -1 and 1.
-type TanhLayer struct{}
+type TanhLayer struct {
+	outSx    int
+	outSy    int
+	outDepth int
+	inAct    *Vol
+	outAct   *Vol
+}
 
-/*
-	TODO:
-	var TanhLayer = function(opt) {
-		var opt = opt || {};
+func (l *TanhLayer) OutDepth() int { return l.outDepth }
+func (l *TanhLayer) OutSx() int    { return l.outSx }
+func (l *TanhLayer) OutSy() int    { return l.outSy }
 
-		// computed
-		this.out_sx = opt.in_sx;
-		this.out_sy = opt.in_sy;
-		this.out_depth = opt.in_depth;
-		this.layer_type = 'tanh';
+func (l *TanhLayer) fromDef(def LayerDef, r *rand.Rand) {
+	// computed
+	l.outSx = def.InSx
+	l.outSy = def.InSy
+	l.outDepth = def.InDepth
+}
+
+func (l *TanhLayer) Forward(v *Vol, isTraining bool) *Vol {
+	l.inAct = v
+	v2 := v.CloneAndZero()
+
+	for i := range v.W {
+		v2.W[i] = math.Tanh(v.W[i])
 	}
-	TanhLayer.prototype = {
-		forward: function(V, is_training) {
-			this.in_act = V;
-			var V2 = V.cloneAndZero();
-			var N = V.w.length;
-			for(var i=0;i<N;i++) {
-				V2.w[i] = tanh(V.w[i]);
-			}
-			this.out_act = V2;
-			return this.out_act;
-		},
-		backward: function() {
-			var V = this.in_act; // we need to set dw of this
-			var V2 = this.out_act;
-			var N = V.w.length;
-			V.dw = global.zeros(N); // zero out gradient wrt data
-			for(var i=0;i<N;i++) {
-				var v2wi = V2.w[i];
-				V.dw[i] = (1.0 - v2wi * v2wi) * V2.dw[i];
-			}
-		},
-		getParamsAndGrads: function() {
-			return [];
-		},
-		toJSON: function() {
-			var json = {};
-			json.out_depth = this.out_depth;
-			json.out_sx = this.out_sx;
-			json.out_sy = this.out_sy;
-			json.layer_type = this.layer_type;
-			return json;
-		},
-		fromJSON: function(json) {
-			this.out_depth = json.out_depth;
-			this.out_sx = json.out_sx;
-			this.out_sy = json.out_sy;
-			this.layer_type = json.layer_type;
-		}
+
+	l.outAct = v2
+
+	return l.outAct
+}
+func (l *TanhLayer) Backward() {
+	v := l.inAct // we need to set dw of this
+	v2 := l.outAct
+
+	v.Dw = make([]float64, len(v.W)) // zero out gradient wrt data
+
+	for i := range v.W {
+		v2wi := v2.W[i]
+		v.Dw[i] = (1.0 - v2wi*v2wi) * v2.Dw[i]
 	}
-*/
+}
+func (l *TanhLayer) ParamsAndGrads() []ParamsAndGrads { return nil }
+
+func (l *TanhLayer) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+	}{
+		OutDepth:  l.outDepth,
+		OutSx:     l.outSx,
+		OutSy:     l.outSy,
+		LayerType: LayerTanh.String(),
+	})
+}
+func (l *TanhLayer) UnmarshalJSON(b []byte) error {
+	var data struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+	}
+
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+
+	l.outDepth = data.OutDepth
+	l.outSx = data.OutSx
+	l.outSy = data.OutSy
+
+	return nil
+}

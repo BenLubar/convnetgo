@@ -1,10 +1,8 @@
+// Package cnnvis contains various utility functions
 package cnnvis
 
 /*
-TODO:
-// contains various utility functions
-var cnnvis = (function(exports){
-
+	TODO:
 	// can be used to graph loss, or accuract over time
 	var Graph = function(options) {
 		var options = options || {};
@@ -82,7 +80,9 @@ var cnnvis = (function(exports){
 			ctx.stroke();
 		}
 	}
-
+*/
+/*
+	TODO:
 	// same as graph but draws multiple lines. For now I'm lazy and duplicating
 	// the code, but in future I will merge these two more nicely.
 	var MultiGraph = function(legend, options) {
@@ -187,13 +187,4 @@ var cnnvis = (function(exports){
 
 		}
 	}
-
-	exports = exports || {};
-	exports.Graph = Graph;
-	exports.MultiGraph = MultiGraph;
-	return exports;
-
-})(typeof module != 'undefined' && module.exports);  // add exports to module.exports if in node.js
-
-
 */
