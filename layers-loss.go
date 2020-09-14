@@ -22,6 +22,8 @@ type SoftmaxLayer struct {
 	es       []float64
 }
 
+var _ LossLayer = (*SoftmaxLayer)(nil)
+
 func (l *SoftmaxLayer) OutSx() int    { return 1 }
 func (l *SoftmaxLayer) OutSy() int    { return 1 }
 func (l *SoftmaxLayer) OutDepth() int { return l.outDepth }
@@ -119,145 +121,157 @@ func (l *SoftmaxLayer) UnmarshalJSON(b []byte) error {
 // implements an L2 regression cost layer,
 // so penalizes \sum_i(||x_i - y_i||^2), where x is its input
 // and y is the user-provided array of "correct" values.
-type RegressionLayer struct{}
-
-/*
-TODO:
-var RegressionLayer = function(opt) {
-	var opt = opt || {};
-
-	// computed
-	this.num_inputs = opt.in_sx * opt.in_sy * opt.in_depth;
-	this.out_depth = this.num_inputs;
-	this.out_sx = 1;
-	this.out_sy = 1;
-	this.layer_type = 'regression';
+type RegressionLayer struct {
+	numInputs int
+	act       *Vol
 }
 
-RegressionLayer.prototype = {
-	forward: function(V, is_training) {
-		this.in_act = V;
-		this.out_act = V;
-		return V; // identity function
-	},
-	// y is a list here of size num_inputs
-	// or it can be a number if only one value is regressed
-	// or it can be a struct {dim: i, val: x} where we only want to
-	// regress on dimension i and asking it to have value x
-	backward: function(y) {
+var _ LossLayer = (*RegressionLayer)(nil)
 
-		// compute and accumulate gradient wrt weights and bias of this layer
-		var x = this.in_act;
-		x.dw = global.zeros(x.w.length); // zero out the gradient of input Vol
-		var loss = 0.0;
-		if(y instanceof Array || y instanceof Float64Array) {
-			for(var i=0;i<this.out_depth;i++) {
-				var dy = x.w[i] - y[i];
-				x.dw[i] = dy;
-				loss += 0.5*dy*dy;
-			}
-		} else if(typeof y === 'number') {
-			// lets hope that only one number is being regressed
-			var dy = x.w[0] - y;
-			x.dw[0] = dy;
-			loss += 0.5*dy*dy;
-		} else {
-			// assume it is a struct with entries .dim and .val
-			// and we pass gradient only along dimension dim to be equal to val
-			var i = y.dim;
-			var yi = y.val;
-			var dy = x.w[i] - yi;
-			x.dw[i] = dy;
-			loss += 0.5*dy*dy;
-		}
-		return loss;
-	},
-	getParamsAndGrads: function() {
-		return [];
-	},
-	toJSON: function() {
-		var json = {};
-		json.out_depth = this.out_depth;
-		json.out_sx = this.out_sx;
-		json.out_sy = this.out_sy;
-		json.layer_type = this.layer_type;
-		json.num_inputs = this.num_inputs;
-		return json;
-	},
-	fromJSON: function(json) {
-		this.out_depth = json.out_depth;
-		this.out_sx = json.out_sx;
-		this.out_sy = json.out_sy;
-		this.layer_type = json.layer_type;
-		this.num_inputs = json.num_inputs;
+func (l *RegressionLayer) OutDepth() int { return l.numInputs }
+func (l *RegressionLayer) OutSx() int    { return 1 }
+func (l *RegressionLayer) OutSy() int    { return 1 }
+
+func (l *RegressionLayer) fromDef(def LayerDef, r *rand.Rand) {
+	// computed
+	l.numInputs = def.InSx * def.InSy * def.InDepth
+}
+
+func (l *RegressionLayer) Forward(v *Vol, isTraining bool) *Vol {
+	l.act = v
+	return v // identity function
+}
+
+func (l *RegressionLayer) Backward() {}
+
+func (l *RegressionLayer) BackwardLoss(y LossData) float64 {
+	// compute and accumulate gradient wrt weights and bias of this layer
+	x := l.act
+	x.Dw = make([]float64, len(x.W)) // zero out the gradient of input Vol
+
+	i, yi := y.Dim, y.Val
+	dy := x.W[i] - yi
+	x.Dw[i] = dy
+
+	return 0.5 * dy * dy
+}
+func (l *RegressionLayer) ParamsAndGrads() []ParamsAndGrads { return nil }
+
+func (l *RegressionLayer) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+		NumInputs int    `json:"num_inputs"`
+	}{
+		OutDepth:  l.numInputs,
+		OutSx:     1,
+		OutSy:     1,
+		LayerType: LayerRegression.String(),
+		NumInputs: l.numInputs,
+	})
+}
+func (l *RegressionLayer) UnmarshalJSON(b []byte) error {
+	var data struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+		NumInputs int    `json:"num_inputs"`
 	}
+
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+
+	l.numInputs = data.NumInputs
+
+	return nil
 }
-*/
 
-type SVMLayer struct{}
+type SVMLayer struct {
+	numInputs int
+	act       *Vol
+}
 
-/*
-TODO:
-var SVMLayer = function(opt) {
-	var opt = opt || {};
+var _ LossLayer = (*SVMLayer)(nil)
 
+func (l *SVMLayer) OutDepth() int { return l.numInputs }
+func (l *SVMLayer) OutSx() int    { return 1 }
+func (l *SVMLayer) OutSy() int    { return 1 }
+
+func (l *SVMLayer) fromDef(def LayerDef, r *rand.Rand) {
 	// computed
-	this.num_inputs = opt.in_sx * opt.in_sy * opt.in_depth;
-	this.out_depth = this.num_inputs;
-	this.out_sx = 1;
-	this.out_sy = 1;
-	this.layer_type = 'svm';
+	l.numInputs = def.InSx * def.InSy * def.InDepth
 }
 
-SVMLayer.prototype = {
-	forward: function(V, is_training) {
-		this.in_act = V;
-		this.out_act = V; // nothing to do, output raw scores
-		return V;
-	},
-	backward: function(y) {
+func (l *SVMLayer) Forward(v *Vol, isTraining bool) *Vol {
+	l.act = v // nothing to do, output raw scores
+	return v
+}
 
-		// compute and accumulate gradient wrt weights and bias of this layer
-		var x = this.in_act;
-		x.dw = global.zeros(x.w.length); // zero out the gradient of input Vol
+func (l *SVMLayer) Backward() {}
 
-		// we're using structured loss here, which means that the score
-		// of the ground truth should be higher than the score of any other
-		// class, by a margin
-		var yscore = x.w[y]; // score of ground truth
-		var margin = 1.0;
-		var loss = 0.0;
-		for(var i=0;i<this.out_depth;i++) {
-			if(y === i) { continue; }
-			var ydiff = -yscore + x.w[i] + margin;
-			if(ydiff > 0) {
-				// violating dimension, apply loss
-				x.dw[i] += 1;
-				x.dw[y] -= 1;
-				loss += ydiff;
-			}
+func (l *SVMLayer) BackwardLoss(y LossData) float64 {
+	// compute and accumulate gradient wrt weights and bias of this layer
+	x := l.act
+	x.Dw = make([]float64, len(x.W)) // zero out the gradient of input Vol
+
+	// we're using structured loss here, which means that the score
+	// of the ground truth should be higher than the score of any other
+	// class, by a margin
+	yscore := x.W[y.Dim] // score of ground truth
+	margin := 1.0
+	loss := 0.0
+
+	for i := 0; i < l.numInputs; i++ {
+		if y.Dim == i {
+			continue
 		}
 
-		return loss;
-	},
-	getParamsAndGrads: function() {
-		return [];
-	},
-	toJSON: function() {
-		var json = {};
-		json.out_depth = this.out_depth;
-		json.out_sx = this.out_sx;
-		json.out_sy = this.out_sy;
-		json.layer_type = this.layer_type;
-		json.num_inputs = this.num_inputs;
-		return json;
-	},
-	fromJSON: function(json) {
-		this.out_depth = json.out_depth;
-		this.out_sx = json.out_sx;
-		this.out_sy = json.out_sy;
-		this.layer_type = json.layer_type;
-		this.num_inputs = json.num_inputs;
+		ydiff := -yscore + x.W[i] + margin
+		if ydiff > 0 {
+			// violating dimension, apply loss
+			x.Dw[i] += 1
+			x.Dw[y.Dim] -= 1
+			loss += ydiff
+		}
 	}
+
+	return loss
 }
-*/
+func (l *SVMLayer) ParamsAndGrads() []ParamsAndGrads { return nil }
+
+func (l *SVMLayer) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+		NumInputs int    `json:"num_inputs"`
+	}{
+		OutDepth:  l.numInputs,
+		OutSx:     1,
+		OutSy:     1,
+		LayerType: LayerSVM.String(),
+		NumInputs: l.numInputs,
+	})
+}
+func (l *SVMLayer) UnmarshalJSON(b []byte) error {
+	var data struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+		NumInputs int    `json:"num_inputs"`
+	}
+
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+
+	l.numInputs = data.NumInputs
+
+	return nil
+}

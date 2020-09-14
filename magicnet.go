@@ -1,29 +1,15 @@
 package convnet
 
+// MagicNet takes data: a list of convnet.Vol, and labels
+// which for now are assumed to be class indices 0..K. MagicNet then:
+// - creates data folds for cross-validation
+// - samples candidate networks
+// - evaluates candidate networks on all data folds
+// - produces predictions by model-averaging the best networks
+type MagicNet struct{}
+
 /*
-TODO:
-(function(global) {
-	"use strict";
-
-	// used utilities, make explicit local references
-	var randf = global.randf;
-	var randi = global.randi;
-	var Net = global.Net;
-	var Trainer = global.Trainer;
-	var maxmin = global.maxmin;
-	var randperm = global.randperm;
-	var weightedSample = global.weightedSample;
-	var getopt = global.getopt;
-	var arrUnique = global.arrUnique;
-
-	/*
-	A MagicNet takes data: a list of convnetjs.Vol(), and labels
-	which for now are assumed to be class indeces 0..K. MagicNet then:
-	- creates data folds for cross-validation
-	- samples candidate networks
-	- evaluates candidate networks on all data folds
-	- produces predictions by model-averaging the best networks
-	* /
+	TODO:
 	var MagicNet = function(data, labels, opt) {
 		var opt = opt || {};
 		if(typeof data === 'undefined') { data = []; }
@@ -320,7 +306,4 @@ TODO:
 		onFinishBatch: function(f) { this.finish_batch_callback = f; }
 
 	};
-
-	global.MagicNet = MagicNet;
-})(convnetjs);
 */
