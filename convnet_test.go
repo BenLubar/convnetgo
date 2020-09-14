@@ -9,7 +9,7 @@ import (
 )
 
 // Simple Fully-Connected Neural Net Classifier.
-func createTestNet() (*convnet.Net, *convnet.SGDTrainer, *rand.Rand) {
+func createTestNet() (*convnet.Net, *convnet.Trainer, *rand.Rand) {
 	r := rand.New(rand.NewSource(0))
 
 	net := &convnet.Net{}
@@ -23,7 +23,12 @@ func createTestNet() (*convnet.Net, *convnet.SGDTrainer, *rand.Rand) {
 
 	net.MakeLayers(layerDefs, r)
 
-	trainer := convnet.NewSGDTrainer(net, &convnet.TrainerOptions{LearningRate: 0.0001, Momentum: 0.0, BatchSize: 1, L2Decay: 0.0})
+	trainer := convnet.NewTrainer(net, convnet.TrainerOptions{
+		LearningRate: 0.0001,
+		Momentum:     0.0,
+		BatchSize:    1,
+		L2Decay:      0.0,
+	})
 
 	return net, trainer, r
 }
@@ -76,7 +81,7 @@ func TestTrain(t *testing.T) {
 		x := convnet.NewVol1D([]float64{r.Float64()*2 - 1, r.Float64()*2 - 1})
 		pv := net.Forward(x, false)
 		gti := r.Intn(3)
-		trainer.Train(x, gti)
+		trainer.Train(x, convnet.LossData{Dim: gti})
 		pv2 := net.Forward(x, false)
 		if pv2.W[gti] <= pv.W[gti] {
 			t.Errorf("expected trained class probability to increase, but it changed from %f to %f", pv.W[gti], pv2.W[gti])
@@ -93,8 +98,8 @@ func TestGradient(t *testing.T) {
 	net, trainer, r := createTestNet()
 
 	x := convnet.NewVol1D([]float64{r.Float64()*2 - 1, r.Float64()*2 - 1})
-	gti := r.Intn(3)      // ground truth index
-	trainer.Train(x, gti) // computes gradients at all layers, and at x
+	gti := r.Intn(3)                             // ground truth index
+	trainer.Train(x, convnet.LossData{Dim: gti}) // computes gradients at all layers, and at x
 
 	const delta = 0.000001
 
@@ -103,9 +108,9 @@ func TestGradient(t *testing.T) {
 
 		xold := x.W[i]
 		x.W[i] += delta
-		c0 := net.CostLoss(x, gti)
+		c0 := net.CostLoss(x, convnet.LossData{Dim: gti})
 		x.W[i] -= 2 * delta
-		c1 := net.CostLoss(x, gti)
+		c1 := net.CostLoss(x, convnet.LossData{Dim: gti})
 		x.W[i] = xold // reset
 
 		gradNumeric := (c0 - c1) / (2 * delta)

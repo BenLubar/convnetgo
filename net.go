@@ -62,9 +62,14 @@ type Layer interface {
 	json.Unmarshaler
 }
 
+type LossData struct {
+	Dim int
+	Val float64
+}
+
 type LossLayer interface {
 	Layer
-	BackwardLoss(y int) float64
+	BackwardLoss(y LossData) float64
 }
 
 type ParamsAndGrads struct {
@@ -217,14 +222,14 @@ func (n *Net) Forward(v *Vol, isTraining bool) *Vol {
 	return act
 }
 
-func (n *Net) CostLoss(v *Vol, y int) float64 {
+func (n *Net) CostLoss(v *Vol, y LossData) float64 {
 	n.Forward(v, false)
 
 	return n.Layers[len(n.Layers)-1].(LossLayer).BackwardLoss(y)
 }
 
 // backprop: compute gradients wrt all parameters
-func (n *Net) Backward(y int) float64 {
+func (n *Net) Backward(y LossData) float64 {
 	loss := n.Layers[len(n.Layers)-1].(LossLayer).BackwardLoss(y) // last layer assumed to be loss layer
 
 	// first layer assumed input

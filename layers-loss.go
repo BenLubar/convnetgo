@@ -63,7 +63,7 @@ func (l *SoftmaxLayer) Forward(v *Vol, isTraining bool) *Vol {
 	return l.outAct
 }
 func (l *SoftmaxLayer) Backward() {}
-func (l *SoftmaxLayer) BackwardLoss(y int) float64 {
+func (l *SoftmaxLayer) BackwardLoss(y LossData) float64 {
 	// compute and accumulate gradient wrt weights and bias of this layer
 	x := l.inAct
 	// zero out the gradient of input Vol
@@ -71,7 +71,7 @@ func (l *SoftmaxLayer) BackwardLoss(y int) float64 {
 
 	for i := 0; i < l.outDepth; i++ {
 		indicator := 0.0
-		if i == y {
+		if i == y.Dim {
 			indicator = 1.0
 		}
 
@@ -80,7 +80,7 @@ func (l *SoftmaxLayer) BackwardLoss(y int) float64 {
 	}
 
 	// loss is the class negative log likelihood
-	return -math.Log(l.es[y])
+	return -math.Log(l.es[y.Dim])
 }
 func (l *SoftmaxLayer) ParamsAndGrads() []ParamsAndGrads { return nil }
 func (l *SoftmaxLayer) MarshalJSON() ([]byte, error) {
