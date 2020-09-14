@@ -1,193 +1,314 @@
+//go:generate stringer -type LayerType -linecomment
+
 package convnet
 
-/*
-TODO:
-(function(global) {
-  "use strict";
-  var Vol = global.Vol; // convenience
-  var assert = global.assert;
+import (
+	"encoding/json"
+	"fmt"
+)
 
-  // Net manages a set of layers
-  // For now constraints: Simple linear order of layers, first layer input last layer a cost layer
-  var Net = function(options) {
-    this.layers = [];
-  }
+type LayerType int
 
-  Net.prototype = {
-    
-    // takes a list of layer definitions and creates the network layer objects
-    makeLayers: function(defs) {
+const (
+	LayerInput      LayerType = iota + 1 // input
+	LayerRelu                            // relu
+	LayerSigmoid                         // sigmoid
+	LayerTanh                            // tanh
+	LayerDropout                         // dropout
+	LayerConv                            // conv
+	LayerPool                            // pool
+	LayerLRN                             // lrn
+	LayerSoftmax                         // softmax
+	LayerRegression                      // regression
+	LayerFC                              // fc
+	LayerMaxout                          // maxout
+	LayerSVM                             // svm
+)
 
-      // few checks
-      assert(defs.length >= 2, 'Error! At least one input layer and one loss layer are required.');
-      assert(defs[0].type === 'input', 'Error! First layer must be the input layer, to declare size of inputs');
+type LayerDef struct {
+	Type          LayerType `json:"type"`
+	NumNeurons    int       `json:"num_neurons"`
+	NumClasses    int       `json:"num_classes"`
+	BiasPref      float64   `json:"bias_pref"`
+	BiasPrefZero  bool      `json:"-"`
+	Activation    LayerType `json:"activation"`
+	GroupSize     int       `json:"group_size"`
+	GroupSizeZero bool      `json:"-"`
+	DropProb      float64   `json:"drop_prob"`
+	InSx          int       `json:"in_sx"`
+	InSy          int       `json:"in_sy"`
+	InDepth       int       `json:"in_depth"`
+	OutSx         int       `json:"out_sx"`
+	OutSy         int       `json:"out_sy"`
+	OutDepth      int       `json:"out_depth"`
+}
 
-      // desugar layer_defs for adding activation, dropout layers etc
-      var desugar = function() {
-        var new_defs = [];
-        for(var i=0;i<defs.length;i++) {
-          var def = defs[i];
-          
-          if(def.type==='softmax' || def.type==='svm') {
-            // add an fc layer here, there is no reason the user should
-            // have to worry about this and we almost always want to
-            new_defs.push({type:'fc', num_neurons: def.num_classes});
-          }
+type Layer interface {
+	OutSx() int
+	OutSy() int
+	OutDepth() int
 
-          if(def.type==='regression') {
-            // add an fc layer here, there is no reason the user should
-            // have to worry about this and we almost always want to
-            new_defs.push({type:'fc', num_neurons: def.num_neurons});
-          }
+	Forward(v *Vol, isTraining bool) *Vol
+	Backward()
+	ParamsAndGrads() []*Vol
 
-          if((def.type==='fc' || def.type==='conv') 
-              && typeof(def.bias_pref) === 'undefined'){
-            def.bias_pref = 0.0;
-            if(typeof def.activation !== 'undefined' && def.activation === 'relu') {
-              def.bias_pref = 0.1; // relus like a bit of positive bias to get gradients early
-              // otherwise it's technically possible that a relu unit will never turn on (by chance)
-              // and will never get any gradient and never contribute any computation. Dead relu.
-            }
-          }
+	fromDef(LayerDef)
+	json.Marshaler
+	json.Unmarshaler
+}
 
-          new_defs.push(def);
+type LossLayer interface {
+	Layer
+	BackwardLoss(y int) float64
+}
 
-          if(typeof def.activation !== 'undefined') {
-            if(def.activation==='relu') { new_defs.push({type:'relu'}); }
-            else if (def.activation==='sigmoid') { new_defs.push({type:'sigmoid'}); }
-            else if (def.activation==='tanh') { new_defs.push({type:'tanh'}); }
-            else if (def.activation==='maxout') {
-              // create maxout activation, and pass along group size, if provided
-              var gs = def.group_size !== 'undefined' ? def.group_size : 2;
-              new_defs.push({type:'maxout', group_size:gs});
-            }
-            else { console.log('ERROR unsupported activation ' + def.activation); }
-          }
-          if(typeof def.drop_prob !== 'undefined' && def.type !== 'dropout') {
-            new_defs.push({type:'dropout', drop_prob: def.drop_prob});
-          }
+// Net manages a set of layers
+// For now constraints: Simple linear order of layers, first layer input last layer a cost layer
+type Net struct {
+	Layers []Layer `json:"layers"`
+}
 
-        }
-        return new_defs;
-      }
-      defs = desugar(defs);
+// desugar layer_defs for adding activation, dropout layers etc
+func desugar(defs []LayerDef) []LayerDef {
+	var newDefs []LayerDef
+	for _, def := range defs {
+		if def.Type == LayerSoftmax || def.Type == LayerSVM {
+			// add an fc layer here, there is no reason the user should
+			// have to worry about this and we almost always want to
+			newDefs = append(newDefs, LayerDef{Type: LayerFC, NumNeurons: def.NumClasses})
+		}
 
-      // create the layers
-      this.layers = [];
-      for(var i=0;i<defs.length;i++) {
-        var def = defs[i];
-        if(i>0) {
-          var prev = this.layers[i-1];
-          def.in_sx = prev.out_sx;
-          def.in_sy = prev.out_sy;
-          def.in_depth = prev.out_depth;
-        }
+		if def.Type == LayerRegression {
+			// add an fc layer here, there is no reason the user should
+			// have to worry about this and we almost always want to
+			newDefs = append(newDefs, LayerDef{Type: LayerFC, NumNeurons: def.NumNeurons})
+		}
 
-        switch(def.type) {
-          case 'fc': this.layers.push(new global.FullyConnLayer(def)); break;
-          case 'lrn': this.layers.push(new global.LocalResponseNormalizationLayer(def)); break;
-          case 'dropout': this.layers.push(new global.DropoutLayer(def)); break;
-          case 'input': this.layers.push(new global.InputLayer(def)); break;
-          case 'softmax': this.layers.push(new global.SoftmaxLayer(def)); break;
-          case 'regression': this.layers.push(new global.RegressionLayer(def)); break;
-          case 'conv': this.layers.push(new global.ConvLayer(def)); break;
-          case 'pool': this.layers.push(new global.PoolLayer(def)); break;
-          case 'relu': this.layers.push(new global.ReluLayer(def)); break;
-          case 'sigmoid': this.layers.push(new global.SigmoidLayer(def)); break;
-          case 'tanh': this.layers.push(new global.TanhLayer(def)); break;
-          case 'maxout': this.layers.push(new global.MaxoutLayer(def)); break;
-          case 'svm': this.layers.push(new global.SVMLayer(def)); break;
-          default: console.log('ERROR: UNRECOGNIZED LAYER TYPE: ' + def.type);
-        }
-      }
-    },
+		if (def.Type == LayerFC || def.Type == LayerConv) && def.BiasPref == 0 && !def.BiasPrefZero {
+			def.BiasPref = 0.0
+			def.BiasPrefZero = true
 
-    // forward prop the network. 
-    // The trainer class passes is_training = true, but when this function is
-    // called from outside (not from the trainer), it defaults to prediction mode
-    forward: function(V, is_training) {
-      if(typeof(is_training) === 'undefined') is_training = false;
-      var act = this.layers[0].forward(V, is_training);
-      for(var i=1;i<this.layers.length;i++) {
-        act = this.layers[i].forward(act, is_training);
-      }
-      return act;
-    },
+			if def.Activation != 0 && def.Activation == LayerRelu {
+				// relus like a bit of positive bias to get gradients early
+				// otherwise it's technically possible that a relu unit will never turn on (by chance)
+				// and will never get any gradient and never contribute any computation. Dead relu.
+				def.BiasPref = 0.1
+			}
+		}
 
-    getCostLoss: function(V, y) {
-      this.forward(V, false);
-      var N = this.layers.length;
-      var loss = this.layers[N-1].backward(y);
-      return loss;
-    },
-    
-    // backprop: compute gradients wrt all parameters
-    backward: function(y) {
-      var N = this.layers.length;
-      var loss = this.layers[N-1].backward(y); // last layer assumed to be loss layer
-      for(var i=N-2;i>=0;i--) { // first layer assumed input
-        this.layers[i].backward();
-      }
-      return loss;
-    },
-    getParamsAndGrads: function() {
-      // accumulate parameters and gradients for the entire network
-      var response = [];
-      for(var i=0;i<this.layers.length;i++) {
-        var layer_reponse = this.layers[i].getParamsAndGrads();
-        for(var j=0;j<layer_reponse.length;j++) {
-          response.push(layer_reponse[j]);
-        }
-      }
-      return response;
-    },
-    getPrediction: function() {
-      // this is a convenience function for returning the argmax
-      // prediction, assuming the last layer of the net is a softmax
-      var S = this.layers[this.layers.length-1];
-      assert(S.layer_type === 'softmax', 'getPrediction function assumes softmax as last layer of the net!');
+		newDefs = append(newDefs, def)
 
-      var p = S.out_act.w;
-      var maxv = p[0];
-      var maxi = 0;
-      for(var i=1;i<p.length;i++) {
-        if(p[i] > maxv) { maxv = p[i]; maxi = i;}
-      }
-      return maxi; // return index of the class with highest class probability
-    },
-    toJSON: function() {
-      var json = {};
-      json.layers = [];
-      for(var i=0;i<this.layers.length;i++) {
-        json.layers.push(this.layers[i].toJSON());
-      }
-      return json;
-    },
-    fromJSON: function(json) {
-      this.layers = [];
-      for(var i=0;i<json.layers.length;i++) {
-        var Lj = json.layers[i]
-        var t = Lj.layer_type;
-        var L;
-        if(t==='input') { L = new global.InputLayer(); }
-        if(t==='relu') { L = new global.ReluLayer(); }
-        if(t==='sigmoid') { L = new global.SigmoidLayer(); }
-        if(t==='tanh') { L = new global.TanhLayer(); }
-        if(t==='dropout') { L = new global.DropoutLayer(); }
-        if(t==='conv') { L = new global.ConvLayer(); }
-        if(t==='pool') { L = new global.PoolLayer(); }
-        if(t==='lrn') { L = new global.LocalResponseNormalizationLayer(); }
-        if(t==='softmax') { L = new global.SoftmaxLayer(); }
-        if(t==='regression') { L = new global.RegressionLayer(); }
-        if(t==='fc') { L = new global.FullyConnLayer(); }
-        if(t==='maxout') { L = new global.MaxoutLayer(); }
-        if(t==='svm') { L = new global.SVMLayer(); }
-        L.fromJSON(Lj);
-        this.layers.push(L);
-      }
-    }
-  }
-  
-  global.Net = Net;
-})(convnetjs);
-*/
+		if def.Activation != 0 {
+			switch def.Activation {
+			case LayerRelu:
+				newDefs = append(newDefs, LayerDef{Type: LayerRelu})
+			case LayerSigmoid:
+				newDefs = append(newDefs, LayerDef{Type: LayerSigmoid})
+			case LayerTanh:
+				newDefs = append(newDefs, LayerDef{Type: LayerTanh})
+			case LayerMaxout:
+				// create maxout activation, and pass along group size, if provided
+				gs := def.GroupSize
+				if def.GroupSize == 0 && !def.GroupSizeZero {
+					gs = 2
+				}
+				newDefs = append(newDefs, LayerDef{Type: LayerMaxout, GroupSize: gs, GroupSizeZero: true})
+			default:
+				panic("convnet: unsupported activation " + def.Activation.String())
+			}
+		}
+		if def.DropProb != 0 && def.Type != LayerDropout {
+			newDefs = append(newDefs, LayerDef{Type: LayerDropout, DropProb: def.DropProb})
+		}
+	}
+	return newDefs
+}
+
+// takes a list of layer definitions and creates the network layer objects
+func (n *Net) MakeLayers(defs []LayerDef) {
+	// few checks
+	if len(defs) < 2 {
+		panic("convnet: at least one input layer and one loss layer are required")
+	}
+	if defs[0].Type != LayerInput {
+		panic("convnet: first layer must be the input layer, to declare size of inputs")
+	}
+
+	defs = desugar(defs)
+
+	// create the layers
+	n.Layers = make([]Layer, len(defs))
+	for i, def := range defs {
+		if i > 0 {
+			prev := n.Layers[i-1]
+			def.InSx = prev.OutSx()
+			def.InSy = prev.OutSy()
+			def.InDepth = prev.OutDepth()
+		}
+
+		switch def.Type {
+		case LayerFC:
+			n.Layers[i] = &FullyConnLayer{}
+			n.Layers[i].fromDef(def)
+		case LayerLRN:
+			n.Layers[i] = &LocalResponseNormalizationLayer{}
+			n.Layers[i].fromDef(def)
+		case LayerDropout:
+			n.Layers[i] = &DropoutLayer{}
+			n.Layers[i].fromDef(def)
+		case LayerInput:
+			n.Layers[i] = &InputLayer{}
+			n.Layers[i].fromDef(def)
+		case LayerSoftmax:
+			n.Layers[i] = &SoftmaxLayer{}
+			n.Layers[i].fromDef(def)
+		case LayerRegression:
+			n.Layers[i] = &RegressionLayer{}
+			n.Layers[i].fromDef(def)
+		case LayerConv:
+			n.Layers[i] = &ConvLayer{}
+			n.Layers[i].fromDef(def)
+		case LayerPool:
+			n.Layers[i] = &PoolLayer{}
+			n.Layers[i].fromDef(def)
+		case LayerRelu:
+			n.Layers[i] = &ReluLayer{}
+			n.Layers[i].fromDef(def)
+		case LayerSigmoid:
+			n.Layers[i] = &SigmoidLayer{}
+			n.Layers[i].fromDef(def)
+		case LayerTanh:
+			n.Layers[i] = &TanhLayer{}
+			n.Layers[i].fromDef(def)
+		case LayerMaxout:
+			n.Layers[i] = &MaxoutLayer{}
+			n.Layers[i].fromDef(def)
+		case LayerSVM:
+			n.Layers[i] = &SVMLayer{}
+			n.Layers[i].fromDef(def)
+		default:
+			panic("convnet: unrecognized layer type: " + def.Type.String())
+		}
+	}
+}
+
+// forward prop the network.
+// The trainer class passes is_training = true, but when this function is
+// called from outside (not from the trainer), it defaults to prediction mode
+func (n *Net) Forward(v *Vol, isTraining bool) *Vol {
+	act := n.Layers[0].Forward(v, isTraining)
+
+	for i := 1; i < len(n.Layers); i++ {
+		act = n.Layers[i].Forward(act, isTraining)
+	}
+
+	return act
+}
+
+func (n *Net) CostLoss(v *Vol, y int) float64 {
+	n.Forward(v, false)
+
+	return n.Layers[len(n.Layers)-1].(LossLayer).BackwardLoss(y)
+}
+
+// backprop: compute gradients wrt all parameters
+func (n *Net) Backward(y int) float64 {
+	loss := n.Layers[len(n.Layers)-1].(LossLayer).BackwardLoss(y) // last layer assumed to be loss layer
+
+	// first layer assumed input
+	for i := len(n.Layers) - 2; i >= 0; i-- {
+		n.Layers[i].Backward()
+	}
+
+	return loss
+}
+
+// accumulate parameters and gradients for the entire network
+func (n *Net) ParamsAndGrads() []*Vol {
+	var response []*Vol
+
+	for _, l := range n.Layers {
+		response = append(response, l.ParamsAndGrads()...)
+	}
+
+	return response
+}
+
+// this is a convenience function for returning the argmax
+// prediction, assuming the last layer of the net is a softmax
+func (n *Net) Prediction() int {
+	s, ok := n.Layers[len(n.Layers)-1].(*SoftmaxLayer)
+	if !ok {
+		panic("convnet: Net.Prediction assumes softmax as the last layer of the net!")
+	}
+
+	p := s.OutAct.W
+	maxv, maxi := p[0], 0
+	for i := 1; i < len(p); i++ {
+		if p[i] > maxv {
+			maxv, maxi = p[i], i
+		}
+	}
+
+	return maxi // return index of the class with highest class probability
+}
+func (n *Net) UnmarshalJSON(b []byte) error {
+	var rawData struct {
+		Layers []json.RawMessage `json:"layers"`
+	}
+
+	if err := json.Unmarshal(b, &rawData); err != nil {
+		return err
+	}
+
+	n.Layers = make([]Layer, 0, len(rawData.Layers))
+
+	for _, lj := range rawData.Layers {
+		var t struct {
+			LayerType string `json:"layer_type"`
+		}
+		if err := json.Unmarshal(lj, &t); err != nil {
+			return err
+		}
+
+		var l Layer
+		switch t.LayerType {
+		case "input":
+			l = &InputLayer{}
+		case "relu":
+			l = &ReluLayer{}
+		case "sigmoid":
+			l = &SigmoidLayer{}
+		case "tanh":
+			l = &TanhLayer{}
+		case "dropout":
+			l = &DropoutLayer{}
+		case "conv":
+			l = &ConvLayer{}
+		case "pool":
+			l = &PoolLayer{}
+		case "lrn":
+			l = &LocalResponseNormalizationLayer{}
+		case "softmax":
+			l = &SoftmaxLayer{}
+		case "regression":
+			l = &RegressionLayer{}
+		case "fc":
+			l = &FullyConnLayer{}
+		case "maxout":
+			l = &MaxoutLayer{}
+		case "svm":
+			l = &SVMLayer{}
+		default:
+			return fmt.Errorf("convnet: unknown layer type %q", t.LayerType)
+		}
+
+		if err := l.UnmarshalJSON(b); err != nil {
+			return err
+		}
+
+		n.Layers = append(n.Layers, l)
+	}
+
+	return nil
+}
