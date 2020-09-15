@@ -56,6 +56,10 @@ type LayerDef struct {
 	Stride         int       `json:"stride"`
 	StrideZero     bool      `json:"-"`
 	Filters        int       `json:"filters"`
+	K              float64   `json:"k"`
+	N              int       `json:"n"`
+	Alpha          float64   `json:"alpha"`
+	Beta           float64   `json:"beta"`
 }
 
 type Layer interface {

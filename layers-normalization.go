@@ -1,133 +1,171 @@
 package convnet
 
-import "math/rand"
+import (
+	"encoding/json"
+	"math"
+	"math/rand"
+)
 
 // Local Response Normalization in window, along depths of volumes
-type LocalResponseNormalizationLayer struct{}
+type LocalResponseNormalizationLayer struct {
+	k        float64
+	alpha    float64
+	beta     float64
+	n        int
+	outSx    int
+	outSy    int
+	outDepth int
+	inAct    *Vol
+	outAct   *Vol
+	s        *Vol
+}
 
-func (l *LocalResponseNormalizationLayer) OutDepth() int { panic("TODO") }
-func (l *LocalResponseNormalizationLayer) OutSx() int    { panic("TODO") }
-func (l *LocalResponseNormalizationLayer) OutSy() int    { panic("TODO") }
+func (l *LocalResponseNormalizationLayer) OutDepth() int { return l.outDepth }
+func (l *LocalResponseNormalizationLayer) OutSx() int    { return l.outSx }
+func (l *LocalResponseNormalizationLayer) OutSy() int    { return l.outSy }
 func (l *LocalResponseNormalizationLayer) fromDef(def LayerDef, r *rand.Rand) {
-	panic("TODO")
-}
-func (l *LocalResponseNormalizationLayer) ParamsAndGrads() []ParamsAndGrads { panic("TODO") }
-func (l *LocalResponseNormalizationLayer) Forward(v *Vol, isTraining bool) *Vol {
-	panic("TODO")
-}
-func (l *LocalResponseNormalizationLayer) Backward() {
-	panic("TODO")
-}
-func (l *LocalResponseNormalizationLayer) MarshalJSON() ([]byte, error) {
-	panic("TODO")
-}
-func (l *LocalResponseNormalizationLayer) UnmarshalJSON(b []byte) error {
-	panic("TODO")
-}
+	// required
+	l.k = def.K
+	l.n = def.N
+	l.alpha = def.Alpha
+	l.beta = def.Beta
 
-/*
-	TODO:
-	var LocalResponseNormalizationLayer = function(opt) {
-		var opt = opt || {};
+	// computed
+	l.outSx = def.InSx
+	l.outSy = def.InSy
+	l.outDepth = def.InDepth
 
-		// required
-		this.k = opt.k;
-		this.n = opt.n;
-		this.alpha = opt.alpha;
-		this.beta = opt.beta;
-
-		// computed
-		this.out_sx = opt.in_sx;
-		this.out_sy = opt.in_sy;
-		this.out_depth = opt.in_depth;
-		this.layer_type = 'lrn';
-
-		// checks
-		if(this.n%2 === 0) { console.log('WARNING n should be odd for LRN layer'); }
+	// checks
+	if l.n%2 == 0 {
+		panic("convnet: n should be odd for LRN layer")
 	}
-	LocalResponseNormalizationLayer.prototype = {
-		forward: function(V, is_training) {
-			this.in_act = V;
+}
+func (l *LocalResponseNormalizationLayer) ParamsAndGrads() []ParamsAndGrads { return nil }
+func (l *LocalResponseNormalizationLayer) Forward(v *Vol, isTraining bool) *Vol {
+	l.inAct = v
 
-			var A = V.cloneAndZero();
-			this.S_cache_ = V.cloneAndZero();
-			var n2 = Math.floor(this.n/2);
-			for(var x=0;x<V.sx;x++) {
-				for(var y=0;y<V.sy;y++) {
-					for(var i=0;i<V.depth;i++) {
+	a := v.CloneAndZero()
+	l.s = v.CloneAndZero()
+	n2 := l.n / 2
 
-						var ai = V.get(x,y,i);
+	for x := 0; x < v.Sx; x++ {
+		for y := 0; y < v.Sy; y++ {
+			for i := 0; i < v.Depth; i++ {
+				ai := v.Get(x, y, i)
 
-						// normalize in a window of size n
-						var den = 0.0;
-						for(var j=Math.max(0,i-n2);j<=Math.min(i+n2,V.depth-1);j++) {
-							var aa = V.get(x,y,j);
-							den += aa*aa;
-						}
-						den *= this.alpha / this.n;
-						den += this.k;
-						this.S_cache_.set(x,y,i,den); // will be useful for backprop
-						den = Math.pow(den, this.beta);
-						A.set(x,y,i,ai/den);
-					}
+				// normalize in a window of size n
+				den := 0.0
+				min := i - n2
+				if min < 0 {
+					min = 0
 				}
-			}
-
-			this.out_act = A;
-			return this.out_act; // dummy identity function for now
-		},
-		backward: function() {
-			// evaluate gradient wrt data
-			var V = this.in_act; // we need to set dw of this
-			V.dw = global.zeros(V.w.length); // zero out gradient wrt data
-			var A = this.out_act; // computed in forward pass
-
-			var n2 = Math.floor(this.n/2);
-			for(var x=0;x<V.sx;x++) {
-				for(var y=0;y<V.sy;y++) {
-					for(var i=0;i<V.depth;i++) {
-
-						var chain_grad = this.out_act.get_grad(x,y,i);
-						var S = this.S_cache_.get(x,y,i);
-						var SB = Math.pow(S, this.beta);
-						var SB2 = SB*SB;
-
-						// normalize in a window of size n
-						for(var j=Math.max(0,i-n2);j<=Math.min(i+n2,V.depth-1);j++) {
-							var aj = V.get(x,y,j);
-							var g = -aj*this.beta*Math.pow(S,this.beta-1)*this.alpha/this.n*2*aj;
-							if(j===i) g+= SB;
-							g /= SB2;
-							g *= chain_grad;
-							V.add_grad(x,y,j,g);
-						}
-
-					}
+				max := i + n2
+				if max >= v.Depth {
+					max = v.Depth - 1
 				}
+				for j := min; j <= max; j++ {
+					aa := v.Get(x, y, j)
+					den += aa * aa
+				}
+				den *= l.alpha / float64(l.n)
+				den += l.k
+				l.s.Set(x, y, i, den) // will be useful for backprop
+				den = math.Pow(den, l.beta)
+				a.Set(x, y, i, ai/den)
 			}
-		},
-		getParamsAndGrads: function() { return []; },
-		toJSON: function() {
-			var json = {};
-			json.k = this.k;
-			json.n = this.n;
-			json.alpha = this.alpha; // normalize by size
-			json.beta = this.beta;
-			json.out_sx = this.out_sx;
-			json.out_sy = this.out_sy;
-			json.out_depth = this.out_depth;
-			json.layer_type = this.layer_type;
-			return json;
-		},
-		fromJSON: function(json) {
-			this.k = json.k;
-			this.n = json.n;
-			this.alpha = json.alpha; // normalize by size
-			this.beta = json.beta;
-			this.out_sx = json.out_sx;
-			this.out_sy = json.out_sy;
-			this.out_depth = json.out_depth;
-			this.layer_type = json.layer_type;
 		}
 	}
-*/
+
+	l.outAct = a
+	return l.outAct
+}
+func (l *LocalResponseNormalizationLayer) Backward() {
+	// evaluate gradient wrt data
+	v := l.inAct                     // we need to set dw of this
+	v.Dw = make([]float64, len(v.W)) // zero out gradient wrt data
+	a := l.outAct                    // computed in forward pass
+
+	n2 := l.n / 2
+	for x := 0; x < v.Sx; x++ {
+		for y := 0; y < v.Sy; y++ {
+			for i := 0; i < v.Depth; i++ {
+				chainGrad := a.GetGrad(x, y, i)
+				s := l.s.Get(x, y, i)
+				sb := math.Pow(s, l.beta)
+				sb2 := sb * sb
+
+				// normalize in a window of size n
+				min := i - n2
+				if min < 0 {
+					min = 0
+				}
+
+				max := i + n2
+				if max >= v.Depth {
+					max = v.Depth - 1
+				}
+
+				for j := min; j <= max; j++ {
+					aj := v.Get(x, y, j)
+					g := -aj * l.beta * math.Pow(s, l.beta-1) * l.alpha / float64(l.n) * 2 * aj
+
+					if j == i {
+						g += sb
+					}
+
+					g /= sb2
+					g *= chainGrad
+					v.AddGrad(x, y, j, g)
+				}
+
+			}
+		}
+	}
+}
+func (l *LocalResponseNormalizationLayer) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		K         float64 `json:"k"`
+		N         int     `json:"n"`
+		Alpha     float64 `json:"alpha"`
+		Beta      float64 `json:"beta"`
+		OutSx     int     `json:"out_sx"`
+		OutSy     int     `json:"out_sy"`
+		OutDepth  int     `json:"out_depth"`
+		LayerType string  `json:"layer_type"`
+	}{
+		K:         l.k,
+		N:         l.n,
+		Alpha:     l.alpha, // normalize by size
+		Beta:      l.beta,
+		OutSx:     l.outSx,
+		OutSy:     l.outSy,
+		OutDepth:  l.outDepth,
+		LayerType: LayerLRN.String(),
+	})
+}
+func (l *LocalResponseNormalizationLayer) UnmarshalJSON(b []byte) error {
+	var data struct {
+		K         float64 `json:"k"`
+		N         int     `json:"n"`
+		Alpha     float64 `json:"alpha"`
+		Beta      float64 `json:"beta"`
+		OutSx     int     `json:"out_sx"`
+		OutSy     int     `json:"out_sy"`
+		OutDepth  int     `json:"out_depth"`
+		LayerType string  `json:"layer_type"`
+	}
+
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+
+	l.k = data.K
+	l.n = data.N
+	l.alpha = data.Alpha // normalize by size
+	l.beta = data.Beta
+	l.outSx = data.OutSx
+	l.outSy = data.OutSy
+	l.outDepth = data.OutDepth
+
+	return nil
+}
