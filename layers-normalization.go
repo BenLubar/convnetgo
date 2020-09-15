@@ -1,7 +1,29 @@
 package convnet
 
+import "math/rand"
+
 // Local Response Normalization in window, along depths of volumes
 type LocalResponseNormalizationLayer struct{}
+
+func (l *LocalResponseNormalizationLayer) OutDepth() int { panic("TODO") }
+func (l *LocalResponseNormalizationLayer) OutSx() int    { panic("TODO") }
+func (l *LocalResponseNormalizationLayer) OutSy() int    { panic("TODO") }
+func (l *LocalResponseNormalizationLayer) fromDef(def LayerDef, r *rand.Rand) {
+	panic("TODO")
+}
+func (l *LocalResponseNormalizationLayer) ParamsAndGrads() []ParamsAndGrads { panic("TODO") }
+func (l *LocalResponseNormalizationLayer) Forward(v *Vol, isTraining bool) *Vol {
+	panic("TODO")
+}
+func (l *LocalResponseNormalizationLayer) Backward() {
+	panic("TODO")
+}
+func (l *LocalResponseNormalizationLayer) MarshalJSON() ([]byte, error) {
+	panic("TODO")
+}
+func (l *LocalResponseNormalizationLayer) UnmarshalJSON(b []byte) error {
+	panic("TODO")
+}
 
 /*
 	TODO:

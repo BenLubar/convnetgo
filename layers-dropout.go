@@ -1,11 +1,33 @@
 package convnet
 
+import "math/rand"
+
 // An inefficient dropout layer
 // Note this is not most efficient implementation since the layer before
 // computed all these activations and now we're just going to drop them :(
 // same goes for backward pass. Also, if we wanted to be efficient at test time
 // we could equivalently be clever and upscale during train and copy pointers during test
 type DropoutLayer struct{}
+
+func (l *DropoutLayer) OutDepth() int { panic("TODO") }
+func (l *DropoutLayer) OutSx() int    { panic("TODO") }
+func (l *DropoutLayer) OutSy() int    { panic("TODO") }
+func (l *DropoutLayer) fromDef(def LayerDef, r *rand.Rand) {
+	panic("TODO")
+}
+func (l *DropoutLayer) ParamsAndGrads() []ParamsAndGrads { panic("TODO") }
+func (l *DropoutLayer) Forward(v *Vol, isTraining bool) *Vol {
+	panic("TODO")
+}
+func (l *DropoutLayer) Backward() {
+	panic("TODO")
+}
+func (l *DropoutLayer) MarshalJSON() ([]byte, error) {
+	panic("TODO")
+}
+func (l *DropoutLayer) UnmarshalJSON(b []byte) error {
+	panic("TODO")
+}
 
 /*
 	TODO:

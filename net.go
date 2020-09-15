@@ -54,6 +54,7 @@ type LayerDef struct {
 	PadZero        bool      `json:"-"`
 	Stride         int       `json:"stride"`
 	StrideZero     bool      `json:"-"`
+	Filters        int       `json:"filters"`
 }
 
 type Layer interface {

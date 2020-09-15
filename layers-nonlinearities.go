@@ -11,6 +11,26 @@ import (
 // the output is in [0, inf)
 type ReluLayer struct{}
 
+func (l *ReluLayer) OutDepth() int { panic("TODO") }
+func (l *ReluLayer) OutSx() int    { panic("TODO") }
+func (l *ReluLayer) OutSy() int    { panic("TODO") }
+func (l *ReluLayer) fromDef(def LayerDef, r *rand.Rand) {
+	panic("TODO")
+}
+func (l *ReluLayer) ParamsAndGrads() []ParamsAndGrads { panic("TODO") }
+func (l *ReluLayer) Forward(v *Vol, isTraining bool) *Vol {
+	panic("TODO")
+}
+func (l *ReluLayer) Backward() {
+	panic("TODO")
+}
+func (l *ReluLayer) MarshalJSON() ([]byte, error) {
+	panic("TODO")
+}
+func (l *ReluLayer) UnmarshalJSON(b []byte) error {
+	panic("TODO")
+}
+
 /*
 	TODO:
 	var ReluLayer = function(opt) {
@@ -68,6 +88,26 @@ type ReluLayer struct{}
 // x -> 1/(1+e^(-x))
 // so the output is between 0 and 1.
 type SigmoidLayer struct{}
+
+func (l *SigmoidLayer) OutDepth() int { panic("TODO") }
+func (l *SigmoidLayer) OutSx() int    { panic("TODO") }
+func (l *SigmoidLayer) OutSy() int    { panic("TODO") }
+func (l *SigmoidLayer) fromDef(def LayerDef, r *rand.Rand) {
+	panic("TODO")
+}
+func (l *SigmoidLayer) ParamsAndGrads() []ParamsAndGrads { panic("TODO") }
+func (l *SigmoidLayer) Forward(v *Vol, isTraining bool) *Vol {
+	panic("TODO")
+}
+func (l *SigmoidLayer) Backward() {
+	panic("TODO")
+}
+func (l *SigmoidLayer) MarshalJSON() ([]byte, error) {
+	panic("TODO")
+}
+func (l *SigmoidLayer) UnmarshalJSON(b []byte) error {
+	panic("TODO")
+}
 
 /*
 	TODO:
@@ -128,6 +168,26 @@ type SigmoidLayer struct{}
 // where x is a vector of size group_size. Ideally of course,
 // the input size should be exactly divisible by group_size
 type MaxoutLayer struct{}
+
+func (l *MaxoutLayer) OutDepth() int { panic("TODO") }
+func (l *MaxoutLayer) OutSx() int    { panic("TODO") }
+func (l *MaxoutLayer) OutSy() int    { panic("TODO") }
+func (l *MaxoutLayer) fromDef(def LayerDef, r *rand.Rand) {
+	panic("TODO")
+}
+func (l *MaxoutLayer) ParamsAndGrads() []ParamsAndGrads { panic("TODO") }
+func (l *MaxoutLayer) Forward(v *Vol, isTraining bool) *Vol {
+	panic("TODO")
+}
+func (l *MaxoutLayer) Backward() {
+	panic("TODO")
+}
+func (l *MaxoutLayer) MarshalJSON() ([]byte, error) {
+	panic("TODO")
+}
+func (l *MaxoutLayer) UnmarshalJSON(b []byte) error {
+	panic("TODO")
+}
 
 /*
 	TODO:

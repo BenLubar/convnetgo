@@ -21,6 +21,10 @@ type PoolLayer struct {
 	outAct  *Vol
 }
 
+func (l *PoolLayer) OutDepth() int { return l.inDepth }
+func (l *PoolLayer) OutSx() int    { return l.outSx }
+func (l *PoolLayer) OutSy() int    { return l.outSy }
+
 func (l *PoolLayer) fromDef(def LayerDef, r *rand.Rand) {
 	// required
 	l.sx = def.Sx // filter size
@@ -57,10 +61,10 @@ func (l *PoolLayer) Forward(v *Vol, isTraining bool) *Vol {
 	n := 0 // a counter for switches
 
 	for d := 0; d < l.inDepth; d++ {
-		x, y := -l.pad, -l.pad
+		x := -l.pad
 
 		for ax := 0; ax < l.outSx; x, ax = x+l.stride, ax+1 {
-			y = -l.pad
+			y := -l.pad
 
 			for ay := 0; ay < l.outSy; y, ay = y+l.stride, ay+1 {
 				// convolve centered at this particular location
@@ -107,10 +111,10 @@ func (l *PoolLayer) Backward() {
 
 	n := 0
 	for d := 0; d < l.inDepth; d++ {
-		x, y := -l.pad, -l.pad
+		x := -l.pad
 
 		for ax := 0; ax < l.outSx; x, ax = x+l.stride, ax+1 {
-			y = -l.pad
+			y := -l.pad
 
 			for ay := 0; ay < l.outSy; y, ay = y+l.stride, ay+1 {
 				chainGrad := l.outAct.GetGrad(ax, ay, d)

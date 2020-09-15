@@ -1,8 +1,6 @@
 // Package cnnutil contains various utility functions.
 package cnnutil
 
-import "fmt"
-
 // Window stores _size_ number of values
 // and returns averages. Useful for keeping running
 // track of validation or training accuracy during SGD
@@ -70,10 +68,4 @@ func MaxMin(w []float64) (maxi int, maxv float64, mini int, minv, dv float64) {
 	}
 
 	return maxi, maxv, mini, minv, maxv - minv
-}
-
-// returns string representation of float
-// but truncated to length of d digits
-func F2T(x float64, d int) string {
-	return fmt.Sprintf("%.*[2][1]f", x, d)
 }
