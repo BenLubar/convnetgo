@@ -1,95 +1,114 @@
 package convnet
 
-import "math/rand"
+import (
+	"encoding/json"
+	"math/rand"
+)
 
 // An inefficient dropout layer
 // Note this is not most efficient implementation since the layer before
 // computed all these activations and now we're just going to drop them :(
 // same goes for backward pass. Also, if we wanted to be efficient at test time
 // we could equivalently be clever and upscale during train and copy pointers during test
-type DropoutLayer struct{}
+type DropoutLayer struct {
+	outSx    int
+	outSy    int
+	outDepth int
+	dropProb float64
+	dropped  []bool
+	rand     *rand.Rand
+	inAct    *Vol
+	outAct   *Vol
+}
 
-func (l *DropoutLayer) OutDepth() int { panic("TODO") }
-func (l *DropoutLayer) OutSx() int    { panic("TODO") }
-func (l *DropoutLayer) OutSy() int    { panic("TODO") }
+func (l *DropoutLayer) OutDepth() int { return l.outDepth }
+func (l *DropoutLayer) OutSx() int    { return l.outSx }
+func (l *DropoutLayer) OutSy() int    { return l.outSy }
 func (l *DropoutLayer) fromDef(def LayerDef, r *rand.Rand) {
-	panic("TODO")
-}
-func (l *DropoutLayer) ParamsAndGrads() []ParamsAndGrads { panic("TODO") }
-func (l *DropoutLayer) Forward(v *Vol, isTraining bool) *Vol {
-	panic("TODO")
-}
-func (l *DropoutLayer) Backward() {
-	panic("TODO")
-}
-func (l *DropoutLayer) MarshalJSON() ([]byte, error) {
-	panic("TODO")
-}
-func (l *DropoutLayer) UnmarshalJSON(b []byte) error {
-	panic("TODO")
-}
+	// computed
+	l.outSx = def.InSx
+	l.outSy = def.InSy
+	l.outDepth = def.InDepth
 
-/*
-	TODO:
-	var DropoutLayer = function(opt) {
-		var opt = opt || {};
-
-		// computed
-		this.out_sx = opt.in_sx;
-		this.out_sy = opt.in_sy;
-		this.out_depth = opt.in_depth;
-		this.layer_type = 'dropout';
-		this.drop_prob = typeof opt.drop_prob !== 'undefined' ? opt.drop_prob : 0.5;
-		this.dropped = global.zeros(this.out_sx*this.out_sy*this.out_depth);
+	l.dropProb = def.DropProb
+	if l.dropProb == 0.0 && !def.DropProbZero {
+		l.dropProb = 0.5
 	}
-	DropoutLayer.prototype = {
-		forward: function(V, is_training) {
-			this.in_act = V;
-			if(typeof(is_training)==='undefined') { is_training = false; } // default is prediction mode
-			var V2 = V.clone();
-			var N = V.w.length;
-			if(is_training) {
-				// do dropout
-				for(var i=0;i<N;i++) {
-					if(Math.random()<this.drop_prob) { V2.w[i]=0; this.dropped[i] = true; } // drop!
-					else {this.dropped[i] = false;}
-				}
+
+	l.dropped = make([]bool, l.outSx*l.outSy*l.outDepth)
+
+	l.rand = r
+}
+func (l *DropoutLayer) ParamsAndGrads() []ParamsAndGrads { return nil }
+func (l *DropoutLayer) Forward(v *Vol, isTraining bool) *Vol {
+	l.inAct = v
+	v2 := v.Clone()
+
+	if isTraining {
+		// do dropout
+		for i := range v2.W {
+			if l.rand.Float64() < l.dropProb {
+				// drop!
+				v2.W[i] = 0
+				l.dropped[i] = true
 			} else {
-				// scale the activations during prediction
-				for(var i=0;i<N;i++) { V2.w[i]*=this.drop_prob; }
+				l.dropped[i] = false
 			}
-			this.out_act = V2;
-			return this.out_act; // dummy identity function for now
-		},
-		backward: function() {
-			var V = this.in_act; // we need to set dw of this
-			var chain_grad = this.out_act;
-			var N = V.w.length;
-			V.dw = global.zeros(N); // zero out gradient wrt data
-			for(var i=0;i<N;i++) {
-				if(!(this.dropped[i])) {
-					V.dw[i] = chain_grad.dw[i]; // copy over the gradient
-				}
-			}
-		},
-		getParamsAndGrads: function() {
-			return [];
-		},
-		toJSON: function() {
-			var json = {};
-			json.out_depth = this.out_depth;
-			json.out_sx = this.out_sx;
-			json.out_sy = this.out_sy;
-			json.layer_type = this.layer_type;
-			json.drop_prob = this.drop_prob;
-			return json;
-		},
-		fromJSON: function(json) {
-			this.out_depth = json.out_depth;
-			this.out_sx = json.out_sx;
-			this.out_sy = json.out_sy;
-			this.layer_type = json.layer_type;
-			this.drop_prob = json.drop_prob;
+		}
+	} else {
+		// scale the activations during prediction
+		for i := range v2.W {
+			v2.W[i] *= l.dropProb
 		}
 	}
-*/
+
+	l.outAct = v2
+
+	return l.outAct
+}
+func (l *DropoutLayer) Backward() {
+	v := l.inAct // we need to set dw of this
+	chainGrad := l.outAct
+
+	v.Dw = make([]float64, len(v.W)) // zero out gradient wrt data
+	for i := range v.Dw {
+		if !l.dropped[i] {
+			v.Dw[i] = chainGrad.Dw[i] // copy over the gradient
+		}
+	}
+}
+func (l *DropoutLayer) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		OutDepth  int     `json:"out_depth"`
+		OutSx     int     `json:"out_sx"`
+		OutSy     int     `json:"out_sy"`
+		LayerType string  `json:"layer_type"`
+		DropProb  float64 `json:"drop_prob"`
+	}{
+		OutDepth:  l.outDepth,
+		OutSx:     l.outSx,
+		OutSy:     l.outSy,
+		LayerType: LayerDropout.String(),
+		DropProb:  l.dropProb,
+	})
+}
+func (l *DropoutLayer) UnmarshalJSON(b []byte) error {
+	var data struct {
+		OutDepth  int     `json:"out_depth"`
+		OutSx     int     `json:"out_sx"`
+		OutSy     int     `json:"out_sy"`
+		LayerType string  `json:"layer_type"`
+		DropProb  float64 `json:"drop_prob"`
+	}
+
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+
+	l.outDepth = data.OutDepth
+	l.outSx = data.OutSx
+	l.outSy = data.OutSy
+	l.dropProb = data.DropProb
+
+	return nil
+}

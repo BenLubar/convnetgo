@@ -36,6 +36,7 @@ type LayerDef struct {
 	GroupSize      int       `json:"group_size"`
 	GroupSizeZero  bool      `json:"-"`
 	DropProb       float64   `json:"drop_prob"`
+	DropProbZero   bool      `json:"-"`
 	InSx           int       `json:"in_sx"`
 	InSy           int       `json:"in_sy"`
 	InDepth        int       `json:"in_depth"`
