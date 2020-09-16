@@ -9,300 +9,310 @@ import (
 // Implements ReLU nonlinearity elementwise
 // x -> max(0, x)
 // the output is in [0, inf)
-type ReluLayer struct{}
+type ReluLayer struct {
+	outDepth int
+	outSx    int
+	outSy    int
+	inAct    *Vol
+	outAct   *Vol
+}
 
-func (l *ReluLayer) OutDepth() int { panic("TODO") }
-func (l *ReluLayer) OutSx() int    { panic("TODO") }
-func (l *ReluLayer) OutSy() int    { panic("TODO") }
+func (l *ReluLayer) OutDepth() int { return l.outDepth }
+func (l *ReluLayer) OutSx() int    { return l.outSx }
+func (l *ReluLayer) OutSy() int    { return l.outSy }
 func (l *ReluLayer) fromDef(def LayerDef, r *rand.Rand) {
-	panic("TODO")
+	// computed
+	l.outSx = def.InSx
+	l.outSy = def.InSy
+	l.outDepth = def.InDepth
 }
-func (l *ReluLayer) ParamsAndGrads() []ParamsAndGrads { panic("TODO") }
+func (l *ReluLayer) ParamsAndGrads() []ParamsAndGrads { return nil }
 func (l *ReluLayer) Forward(v *Vol, isTraining bool) *Vol {
-	panic("TODO")
-}
-func (l *ReluLayer) Backward() {
-	panic("TODO")
-}
-func (l *ReluLayer) MarshalJSON() ([]byte, error) {
-	panic("TODO")
-}
-func (l *ReluLayer) UnmarshalJSON(b []byte) error {
-	panic("TODO")
-}
+	l.inAct = v
+	v2 := v.Clone()
 
-/*
-	TODO:
-	var ReluLayer = function(opt) {
-		var opt = opt || {};
-
-		// computed
-		this.out_sx = opt.in_sx;
-		this.out_sy = opt.in_sy;
-		this.out_depth = opt.in_depth;
-		this.layer_type = 'relu';
-	}
-	ReluLayer.prototype = {
-		forward: function(V, is_training) {
-			this.in_act = V;
-			var V2 = V.clone();
-			var N = V.w.length;
-			var V2w = V2.w;
-			for(var i=0;i<N;i++) {
-				if(V2w[i] < 0) V2w[i] = 0; // threshold at 0
-			}
-			this.out_act = V2;
-			return this.out_act;
-		},
-		backward: function() {
-			var V = this.in_act; // we need to set dw of this
-			var V2 = this.out_act;
-			var N = V.w.length;
-			V.dw = global.zeros(N); // zero out gradient wrt data
-			for(var i=0;i<N;i++) {
-				if(V2.w[i] <= 0) V.dw[i] = 0; // threshold
-				else V.dw[i] = V2.dw[i];
-			}
-		},
-		getParamsAndGrads: function() {
-			return [];
-		},
-		toJSON: function() {
-			var json = {};
-			json.out_depth = this.out_depth;
-			json.out_sx = this.out_sx;
-			json.out_sy = this.out_sy;
-			json.layer_type = this.layer_type;
-			return json;
-		},
-		fromJSON: function(json) {
-			this.out_depth = json.out_depth;
-			this.out_sx = json.out_sx;
-			this.out_sy = json.out_sy;
-			this.layer_type = json.layer_type;
+	for i := range v2.W {
+		if v2.W[i] < 0 {
+			v2.W[i] = 0 // threshold at 0
 		}
 	}
-*/
+
+	l.outAct = v2
+
+	return l.outAct
+}
+func (l *ReluLayer) Backward() {
+	v := l.inAct // we need to set dw of this
+	v2 := l.outAct
+	v.Dw = make([]float64, len(v.W)) // zero out gradient wrt data
+
+	for i := range v.Dw {
+		if v2.W[i] <= 0 {
+			v.Dw[i] = 0 // threshold
+		} else {
+			v.Dw[i] = v2.Dw[i]
+		}
+	}
+}
+func (l *ReluLayer) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+	}{
+		OutDepth:  l.outDepth,
+		OutSx:     l.outSx,
+		OutSy:     l.outSy,
+		LayerType: LayerRelu.String(),
+	})
+}
+func (l *ReluLayer) UnmarshalJSON(b []byte) error {
+	var data struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+	}
+
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+
+	l.outDepth = data.OutDepth
+	l.outSx = data.OutSx
+	l.outSy = data.OutSy
+
+	return nil
+}
 
 // Implements Sigmoid nonlinearity elementwise
 // x -> 1/(1+e^(-x))
 // so the output is between 0 and 1.
-type SigmoidLayer struct{}
+type SigmoidLayer struct {
+	outDepth int
+	outSx    int
+	outSy    int
+	inAct    *Vol
+	outAct   *Vol
+}
 
-func (l *SigmoidLayer) OutDepth() int { panic("TODO") }
-func (l *SigmoidLayer) OutSx() int    { panic("TODO") }
-func (l *SigmoidLayer) OutSy() int    { panic("TODO") }
+func (l *SigmoidLayer) OutDepth() int { return l.outDepth }
+func (l *SigmoidLayer) OutSx() int    { return l.outSx }
+func (l *SigmoidLayer) OutSy() int    { return l.outSy }
 func (l *SigmoidLayer) fromDef(def LayerDef, r *rand.Rand) {
-	panic("TODO")
+	// computed
+	l.outSx = def.InSx
+	l.outSy = def.InSy
+	l.outDepth = def.InDepth
 }
 func (l *SigmoidLayer) ParamsAndGrads() []ParamsAndGrads { panic("TODO") }
 func (l *SigmoidLayer) Forward(v *Vol, isTraining bool) *Vol {
-	panic("TODO")
+	l.inAct = v
+	v2 := v.CloneAndZero()
+
+	for i := range v2.W {
+		v2.W[i] = 1.0 / (1.0 + math.Exp(-v.W[i]))
+	}
+
+	l.outAct = v2
+
+	return l.outAct
 }
 func (l *SigmoidLayer) Backward() {
-	panic("TODO")
+	v := l.inAct // we need to set dw of this
+	v2 := l.outAct
+
+	v.Dw = make([]float64, len(v.W)) // zero out gradient wrt data
+
+	for i := range v.Dw {
+		v.Dw[i] = v2.W[i] * (1.0 - v2.W[i]) * v2.Dw[i]
+	}
 }
 func (l *SigmoidLayer) MarshalJSON() ([]byte, error) {
-	panic("TODO")
+	return json.Marshal(&struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+	}{
+		OutDepth:  l.outDepth,
+		OutSx:     l.outSx,
+		OutSy:     l.outSy,
+		LayerType: LayerSigmoid.String(),
+	})
 }
 func (l *SigmoidLayer) UnmarshalJSON(b []byte) error {
-	panic("TODO")
+	var data struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+	}
+
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+
+	l.outDepth = data.OutDepth
+	l.outSx = data.OutSx
+	l.outSy = data.OutSy
+
+	return nil
 }
-
-/*
-	TODO:
-	var SigmoidLayer = function(opt) {
-		var opt = opt || {};
-
-		// computed
-		this.out_sx = opt.in_sx;
-		this.out_sy = opt.in_sy;
-		this.out_depth = opt.in_depth;
-		this.layer_type = 'sigmoid';
-	}
-	SigmoidLayer.prototype = {
-		forward: function(V, is_training) {
-			this.in_act = V;
-			var V2 = V.cloneAndZero();
-			var N = V.w.length;
-			var V2w = V2.w;
-			var Vw = V.w;
-			for(var i=0;i<N;i++) {
-				V2w[i] = 1.0/(1.0+Math.exp(-Vw[i]));
-			}
-			this.out_act = V2;
-			return this.out_act;
-		},
-		backward: function() {
-			var V = this.in_act; // we need to set dw of this
-			var V2 = this.out_act;
-			var N = V.w.length;
-			V.dw = global.zeros(N); // zero out gradient wrt data
-			for(var i=0;i<N;i++) {
-				var v2wi = V2.w[i];
-				V.dw[i] =  v2wi * (1.0 - v2wi) * V2.dw[i];
-			}
-		},
-		getParamsAndGrads: function() {
-			return [];
-		},
-		toJSON: function() {
-			var json = {};
-			json.out_depth = this.out_depth;
-			json.out_sx = this.out_sx;
-			json.out_sy = this.out_sy;
-			json.layer_type = this.layer_type;
-			return json;
-		},
-		fromJSON: function(json) {
-			this.out_depth = json.out_depth;
-			this.out_sx = json.out_sx;
-			this.out_sy = json.out_sy;
-			this.layer_type = json.layer_type;
-		}
-	}
-*/
 
 // Implements Maxout nonlinearity that computes
 // x -> max(x)
 // where x is a vector of size group_size. Ideally of course,
 // the input size should be exactly divisible by group_size
-type MaxoutLayer struct{}
+type MaxoutLayer struct {
+	groupSize int
+	outDepth  int
+	outSx     int
+	outSy     int
+	switches  []int
+	inAct     *Vol
+	outAct    *Vol
+}
 
 func (l *MaxoutLayer) OutDepth() int { panic("TODO") }
 func (l *MaxoutLayer) OutSx() int    { panic("TODO") }
 func (l *MaxoutLayer) OutSy() int    { panic("TODO") }
 func (l *MaxoutLayer) fromDef(def LayerDef, r *rand.Rand) {
-	panic("TODO")
+	// required
+	l.groupSize = def.GroupSize
+	if l.groupSize == 0 && !def.GroupSizeZero {
+		l.groupSize = 2
+	}
+
+	// computed
+	l.outSx = def.InSx
+	l.outSy = def.InSy
+	l.outDepth = def.InDepth / l.groupSize
+
+	l.switches = make([]int, l.outSx*l.outSy*l.outDepth) // useful for backprop
 }
 func (l *MaxoutLayer) ParamsAndGrads() []ParamsAndGrads { panic("TODO") }
 func (l *MaxoutLayer) Forward(v *Vol, isTraining bool) *Vol {
-	panic("TODO")
-}
-func (l *MaxoutLayer) Backward() {
-	panic("TODO")
-}
-func (l *MaxoutLayer) MarshalJSON() ([]byte, error) {
-	panic("TODO")
-}
-func (l *MaxoutLayer) UnmarshalJSON(b []byte) error {
-	panic("TODO")
-}
+	l.inAct = v
+	v2 := NewVol(l.outSx, l.outSy, l.outDepth, 0.0)
 
-/*
-	TODO:
-	var MaxoutLayer = function(opt) {
-		var opt = opt || {};
+	// optimization branch. If we're operating on 1D arrays we dont have
+	// to worry about keeping track of x,y,d coordinates inside
+	// input volumes. In convnets we do :(
+	if l.outSx == 1 && l.outSy == 1 {
+		for i := 0; i < l.outDepth; i++ {
+			ix := i * l.groupSize // base index offset
+			a := v.W[ix]
+			ai := 0
 
-		// required
-		this.group_size = typeof opt.group_size !== 'undefined' ? opt.group_size : 2;
+			for j := 1; j < l.groupSize; j++ {
+				a2 := v.W[ix+j]
 
-		// computed
-		this.out_sx = opt.in_sx;
-		this.out_sy = opt.in_sy;
-		this.out_depth = Math.floor(opt.in_depth / this.group_size);
-		this.layer_type = 'maxout';
-
-		this.switches = global.zeros(this.out_sx*this.out_sy*this.out_depth); // useful for backprop
-	}
-	MaxoutLayer.prototype = {
-		forward: function(V, is_training) {
-			this.in_act = V;
-			var N = this.out_depth;
-			var V2 = new Vol(this.out_sx, this.out_sy, this.out_depth, 0.0);
-
-			// optimization branch. If we're operating on 1D arrays we dont have
-			// to worry about keeping track of x,y,d coordinates inside
-			// input volumes. In convnets we do :(
-			if(this.out_sx === 1 && this.out_sy === 1) {
-				for(var i=0;i<N;i++) {
-					var ix = i * this.group_size; // base index offset
-					var a = V.w[ix];
-					var ai = 0;
-					for(var j=1;j<this.group_size;j++) {
-						var a2 = V.w[ix+j];
-						if(a2 > a) {
-							a = a2;
-							ai = j;
-						}
-					}
-					V2.w[i] = a;
-					this.switches[i] = ix + ai;
-				}
-			} else {
-				var n=0; // counter for switches
-				for(var x=0;x<V.sx;x++) {
-					for(var y=0;y<V.sy;y++) {
-						for(var i=0;i<N;i++) {
-							var ix = i * this.group_size;
-							var a = V.get(x, y, ix);
-							var ai = 0;
-							for(var j=1;j<this.group_size;j++) {
-								var a2 = V.get(x, y, ix+j);
-								if(a2 > a) {
-									a = a2;
-									ai = j;
-								}
-							}
-							V2.set(x,y,i,a);
-							this.switches[n] = ix + ai;
-							n++;
-						}
-					}
-				}
-
-			}
-			this.out_act = V2;
-			return this.out_act;
-		},
-		backward: function() {
-			var V = this.in_act; // we need to set dw of this
-			var V2 = this.out_act;
-			var N = this.out_depth;
-			V.dw = global.zeros(V.w.length); // zero out gradient wrt data
-
-			// pass the gradient through the appropriate switch
-			if(this.out_sx === 1 && this.out_sy === 1) {
-				for(var i=0;i<N;i++) {
-					var chain_grad = V2.dw[i];
-					V.dw[this.switches[i]] = chain_grad;
-				}
-			} else {
-				// bleh okay, lets do this the hard way
-				var n=0; // counter for switches
-				for(var x=0;x<V2.sx;x++) {
-					for(var y=0;y<V2.sy;y++) {
-						for(var i=0;i<N;i++) {
-							var chain_grad = V2.get_grad(x,y,i);
-							V.set_grad(x,y,this.switches[n],chain_grad);
-							n++;
-						}
-					}
+				if a2 > a {
+					a = a2
+					ai = j
 				}
 			}
-		},
-		getParamsAndGrads: function() {
-			return [];
-		},
-		toJSON: function() {
-			var json = {};
-			json.out_depth = this.out_depth;
-			json.out_sx = this.out_sx;
-			json.out_sy = this.out_sy;
-			json.layer_type = this.layer_type;
-			json.group_size = this.group_size;
-			return json;
-		},
-		fromJSON: function(json) {
-			this.out_depth = json.out_depth;
-			this.out_sx = json.out_sx;
-			this.out_sy = json.out_sy;
-			this.layer_type = json.layer_type;
-			this.group_size = json.group_size;
-			this.switches = global.zeros(this.group_size);
+			v2.W[i] = a
+			l.switches[i] = ix + ai
+		}
+	} else {
+		n := 0 // counter for switches
+
+		for x := 0; x < v.Sx; x++ {
+			for y := 0; y < v.Sy; y++ {
+				for i := 0; i < l.outDepth; i++ {
+					ix := i * l.groupSize
+					a := v.Get(x, y, ix)
+					ai := 0
+
+					for j := 1; j < l.groupSize; j++ {
+						a2 := v.Get(x, y, ix+j)
+
+						if a2 > a {
+							a = a2
+							ai = j
+						}
+					}
+
+					v2.Set(x, y, i, a)
+					l.switches[n] = ix + ai
+
+					n++
+				}
+			}
 		}
 	}
-*/
+
+	l.outAct = v2
+
+	return l.outAct
+}
+func (l *MaxoutLayer) Backward() {
+	v := l.inAct // we need to set dw of this
+	v2 := l.outAct
+	v.Dw = make([]float64, len(v.W)) // zero out gradient wrt data
+
+	// pass the gradient through the appropriate switch
+	if l.outSx == 1 && l.outSy == 1 {
+		for i := range v.Dw {
+			chainGrad := v2.Dw[i]
+
+			v.Dw[l.switches[i]] = chainGrad
+		}
+	} else {
+		// bleh okay, lets do this the hard way
+		n := 0 // counter for switches
+
+		for x := 0; x < v2.Sx; x++ {
+			for y := 0; y < v2.Sy; y++ {
+				for i := 0; i < l.outDepth; i++ {
+					chainGrad := v2.GetGrad(x, y, i)
+					v.SetGrad(x, y, l.switches[n], chainGrad)
+
+					n++
+				}
+			}
+		}
+	}
+}
+func (l *MaxoutLayer) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+		GroupSize int    `json:"group_size"`
+	}{
+		OutDepth:  l.outDepth,
+		OutSx:     l.outSx,
+		OutSy:     l.outSy,
+		LayerType: LayerMaxout.String(),
+		GroupSize: l.groupSize,
+	})
+}
+func (l *MaxoutLayer) UnmarshalJSON(b []byte) error {
+	var data struct {
+		OutDepth  int    `json:"out_depth"`
+		OutSx     int    `json:"out_sx"`
+		OutSy     int    `json:"out_sy"`
+		LayerType string `json:"layer_type"`
+		GroupSize int    `json:"group_size"`
+	}
+
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+
+	l.outDepth = data.OutDepth
+	l.outSx = data.OutSx
+	l.outSy = data.OutSy
+	l.groupSize = data.GroupSize
+	l.switches = make([]int, l.outSx*l.outSy*l.outDepth)
+
+	return nil
+}
 
 // Implements Tanh nnonlinearity elementwise
 // x -> tanh(x)
