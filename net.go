@@ -326,7 +326,7 @@ func (n *Net) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("convnet: unknown layer type %q", t.LayerType)
 		}
 
-		if err := l.UnmarshalJSON(b); err != nil {
+		if err := l.UnmarshalJSON(lj); err != nil {
 			return err
 		}
 
