@@ -92,6 +92,10 @@ func (t *Trainer) Train(x *Vol, y LossData) TrainingResult {
 					t.xsum = append(t.xsum, nil) // conserve memory
 				}
 			}
+		} else if len(t.gsum) == 0 {
+			// so we can grab them from outside the switch statement later
+			t.gsum = make([][]float64, len(pglist))
+			t.xsum = make([][]float64, len(pglist))
 		}
 
 		// perform an update for all sets of weights
