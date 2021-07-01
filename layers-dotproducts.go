@@ -295,9 +295,21 @@ func (l *FullyConnLayer) Forward(v *Vol, isTraining bool) *Vol {
 	a := NewVol(1, 1, l.outDepth, 0.0)
 
 	for i, f := range l.filters {
-		sum := 0.0
+		sum0, sum1, sum2, sum3 := 0.0, 0.0, 0.0, 0.0
 
-		for d := 0; d < l.numInputs; d++ {
+		// unrolled dot product
+		d := 0
+		for ; d < l.numInputs&^3; d += 4 {
+			sum0 = math.FMA(v.W[d], f.W[d], sum0)
+			sum1 = math.FMA(v.W[d+1], f.W[d+1], sum1)
+			sum2 = math.FMA(v.W[d+2], f.W[d+2], sum2)
+			sum3 = math.FMA(v.W[d+3], f.W[d+3], sum3)
+		}
+
+		sum := sum0 + sum1 + sum2 + sum3
+
+		// finish any remaining elements
+		for ; d < l.numInputs; d++ {
 			sum = math.FMA(v.W[d], f.W[d], sum)
 		}
 
