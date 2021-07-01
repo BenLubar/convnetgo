@@ -2,6 +2,7 @@ package convnet
 
 import (
 	"encoding/json"
+	"math"
 	"math/rand"
 )
 
@@ -297,7 +298,7 @@ func (l *FullyConnLayer) Forward(v *Vol, isTraining bool) *Vol {
 		sum := 0.0
 
 		for d := 0; d < l.numInputs; d++ {
-			sum += v.W[d] * f.W[d] // for efficiency use Vols directly for now
+			sum = math.FMA(v.W[d], f.W[d], sum)
 		}
 
 		sum += l.biases.W[i]
@@ -317,8 +318,8 @@ func (l *FullyConnLayer) Backward() {
 		chainGrad := l.outAct.Dw[i]
 
 		for d := 0; d < l.numInputs; d++ {
-			v.Dw[d] += f.W[d] * chainGrad // grad wrt input data
-			f.Dw[d] += v.W[d] * chainGrad // grad wrt params
+			v.Dw[d] = math.FMA(f.W[d], chainGrad, v.Dw[d]) // grad wrt input data
+			f.Dw[d] = math.FMA(v.W[d], chainGrad, f.Dw[d]) // grad wrt params
 		}
 
 		l.biases.Dw[i] += chainGrad

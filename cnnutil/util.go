@@ -5,48 +5,48 @@ package cnnutil
 // and returns averages. Useful for keeping running
 // track of validation or training accuracy during SGD
 type Window struct {
-	v       []float64
-	index   int
-	size    int
-	minsize int
+	V       []float64
+	Index   int
+	Size    int
+	MinSize int
 }
 
 func NewWindow(size, minsize int) *Window {
 	return &Window{
-		v:       make([]float64, 0, size),
-		size:    size,
-		minsize: minsize,
+		V:       make([]float64, 0, size),
+		Size:    size,
+		MinSize: minsize,
 	}
 }
 
 func (w *Window) Add(x float64) {
-	if len(w.v) < w.size {
-		w.v = append(w.v, x)
+	if len(w.V) < w.Size {
+		w.V = append(w.V, x)
 	} else {
-		w.v[w.index] = x
-		w.index++
+		w.V[w.Index] = x
+		w.Index++
 
-		if w.index >= w.size {
-			w.index = 0
+		if w.Index >= w.Size {
+			w.Index = 0
 		}
 	}
 }
 func (w *Window) Average() float64 {
-	if len(w.v) < w.minsize {
+	if len(w.V) < w.MinSize {
 		return -1
 	}
 
 	sum := 0.0
 
-	for _, f := range w.v {
+	for _, f := range w.V {
 		sum += f
 	}
 
-	return sum / float64(len(w.v))
+	return sum / float64(len(w.V))
 }
 func (w *Window) Reset() {
-	w.v = w.v[:0]
-	w.index = 0
+	w.V = w.V[:0]
+	w.Index = 0
 }
 
 // returns min, max and indices of an array
